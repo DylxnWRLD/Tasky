@@ -1,3 +1,11 @@
+import java.util.Properties
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -12,6 +20,8 @@ android {
         }
     }
 
+
+
     defaultConfig {
         applicationId = "com.example.tasky"
         minSdk = 24
@@ -22,8 +32,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
 
-        val supabaseUrl = project.findProperty("SUPABASE_URL") as String
-        val supabaseKey = project.findProperty("SUPABASE_KEY") as String
+        val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: ""
+        val supabaseKey = localProperties.getProperty("SUPABASE_KEY") ?: ""
 
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
