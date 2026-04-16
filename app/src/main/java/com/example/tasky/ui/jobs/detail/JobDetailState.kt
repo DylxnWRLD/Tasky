@@ -5,6 +5,7 @@ import com.example.tasky.domain.model.Job
 data class JobDetailState(
     val job: Job? = null,
     val isLoading: Boolean = false,
+    val isApplying: Boolean = false,
     val showConfirmDialog: Boolean = false,
     val userMessage: String? = null,
     val errorMessage: String? = null,
