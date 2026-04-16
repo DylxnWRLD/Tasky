@@ -29,7 +29,7 @@ class JobRepositoryImpl : JobRepository {
             Result.failure(e)
         }
     }
-    
+
     override suspend fun getJobById(jobId: String): Result<Job> = withContext(Dispatchers.IO) {
         try {
             val jobDto = client.postgrest.from("trabajos")

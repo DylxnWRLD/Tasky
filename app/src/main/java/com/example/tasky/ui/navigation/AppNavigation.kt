@@ -8,7 +8,6 @@ import com.example.tasky.ui.auth.LoginRoute
 import com.example.tasky.ui.auth.LoginViewModel
 import com.example.tasky.domain.usecase.LoginUseCase
 import com.example.tasky.data.repository.AuthRepositoryImpl
-// Importa tus nuevas clases de Jobs
 import com.example.tasky.ui.jobs.detail.JobDetailScreen
 import com.example.tasky.ui.jobs.detail.JobDetailViewModel
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
@@ -22,6 +21,7 @@ fun AppNavigation() {
         navController = navController,
         startDestination = "login"
     ) {
+        // --- PANTALLA DE LOGIN ---
         composable("login") {
             val viewModel = remember {
                 val repository = AuthRepositoryImpl()
@@ -33,9 +33,7 @@ fun AppNavigation() {
 
             LaunchedEffect(state.user) {
                 if (state.user != null) {
-
-                    navController.navigate("job_detail/1") {
-                        popUpTo("login") { inclusive = true }
+                    navController.navigate("job_detail/3116e588-c8ed-49a3-b322-4325eb31f13c") {                        popUpTo("login") { inclusive = true }
                     }
                 }
             }
@@ -52,10 +50,10 @@ fun AppNavigation() {
             val detailViewModel = remember {
                 val repository = JobRepositoryImpl()
                 val useCase = ApplyToJobUseCase(repository)
-                JobDetailViewModel(useCase)
+                JobDetailViewModel(repository, useCase)
             }
 
-            JobDetailScreen(viewModel = detailViewModel)
+            JobDetailScreen(jobId = jobId, viewModel = detailViewModel)
         }
 
         composable("home") {
