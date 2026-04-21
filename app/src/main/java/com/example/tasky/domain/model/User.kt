@@ -15,6 +15,9 @@ data class User(
 
     val location: String? = null,
 
-    @SerialName("experience_years")
-    val experienceYears: Int = 0
+    val experience: String? = null,
+
+    val bio: String? = null,
+
+    val skills: List<String>? = null
 )

@@ -21,13 +21,11 @@ fun JobDetailScreen(
 ) {
     val state = viewModel.state
 
-    // Disparamos la carga de datos al iniciar
     LaunchedEffect(key1 = jobId) {
         viewModel.loadJobById(jobId)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF9494FF))) {
-        // Indicador de carga inicial
         if (state.isLoading && state.job == null) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
         }
@@ -71,7 +69,6 @@ fun JobDetailScreen(
 
                         Spacer(Modifier.height(24.dp))
 
-                        // Cuadro de descripción gris
                         Surface(color = Color(0xFFF0F0F0), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
                             Column(Modifier.padding(16.dp)) {
                                 Text("Descripción:", fontWeight = FontWeight.Bold)
@@ -84,7 +81,6 @@ fun JobDetailScreen(
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        // Botón de Postulación
                         Button(
                             onClick = { if (!job.isApplied) viewModel.onApplyClick() },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -108,7 +104,6 @@ fun JobDetailScreen(
             }
         }
 
-        // Diálogo de Confirmación (Flujo Normal Paso 2)
         if (state.showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.onDismissDialog() },
@@ -123,7 +118,6 @@ fun JobDetailScreen(
             )
         }
 
-        // Mensajes (Éxito o Error)
         state.userMessage?.let {
             Text(it, color = Color(0xFF4CAF50), modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
