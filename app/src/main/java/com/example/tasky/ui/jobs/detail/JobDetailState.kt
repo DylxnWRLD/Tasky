@@ -11,7 +11,6 @@ data class JobDetailState(
     val isOwner: Boolean = false,
     val isApplied: Boolean = false,
 
-    // UI Feedback
     val showConfirmDialog: Boolean = false,
     val userMessage: String? = null,
     val errorMessage: String? = null,

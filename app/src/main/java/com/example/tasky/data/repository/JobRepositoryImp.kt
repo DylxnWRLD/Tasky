@@ -56,17 +56,24 @@ class JobRepositoryImpl : JobRepository {
                     filter { eq("id", jobId) }
                 }.decodeSingle<JobDto>()
 
-
-            val isApplied = if (userId != null) {
-                val countResponse = client.postgrest.from("postulaciones")
-                    .select {
-                        filter {
-                            eq("job_id", jobId)
-                            eq("worker_id", userId)
+            var isApplied = false
+            if (userId != null) {
+                try {
+                    val response = client.postgrest.from("postulaciones")
+                        .select {
+                            filter {
+                                eq("job_id", jobId)
+                                eq("worker_id", userId)
+                            }
                         }
-                    }
-                countResponse.data != "[]"
-            } else false
+
+                    val jsonArray = response.decodeAs<kotlinx.serialization.json.JsonArray>()
+                    isApplied = jsonArray.isNotEmpty()
+                } catch (e: Exception) {
+                    isApplied = false
+                    println("Error verificando postulación: ${e.message}")
+                }
+            }
 
             val job = Job(
                 id = jobDto.id,

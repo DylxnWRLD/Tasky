@@ -32,7 +32,7 @@ fun AppNavigation() {
 
             LaunchedEffect(state.user) {
                 if (state.user != null) {
-                    navController.navigate("job_detail/7f72b1f4-7596-4c2b-b659-c68b1305d438") {                        popUpTo("login") { inclusive = true }
+                    navController.navigate("job_detail/2778f89d-83f1-4468-aff6-736818c7fb45") {                        popUpTo("login") { inclusive = true }
                     }
                 }
             }
