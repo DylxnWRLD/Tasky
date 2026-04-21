@@ -26,6 +26,6 @@ data class Job(
 
     val status: String = "abierto",
 
-    
+
     val isApplied: Boolean = false
 )

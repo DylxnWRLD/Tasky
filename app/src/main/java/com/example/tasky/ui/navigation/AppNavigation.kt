@@ -21,7 +21,6 @@ fun AppNavigation() {
         navController = navController,
         startDestination = "login"
     ) {
-        // --- PANTALLA DE LOGIN ---
         composable("login") {
             val viewModel = remember {
                 val repository = AuthRepositoryImpl()
@@ -33,7 +32,7 @@ fun AppNavigation() {
 
             LaunchedEffect(state.user) {
                 if (state.user != null) {
-                    navController.navigate("job_detail/3116e588-c8ed-49a3-b322-4325eb31f13c") {                        popUpTo("login") { inclusive = true }
+                    navController.navigate("job_detail/7f72b1f4-7596-4c2b-b659-c68b1305d438") {                        popUpTo("login") { inclusive = true }
                     }
                 }
             }

@@ -22,6 +22,7 @@ fun JobDetailScreen(
     val state = viewModel.state
 
     LaunchedEffect(key1 = jobId) {
+        viewModel.loadJobById("7f72b1f4-7596-4c2b-b659-c68b1305d438")
         viewModel.loadJobById(jobId)
     }
 
@@ -33,7 +34,7 @@ fun JobDetailScreen(
         state.job?.let { job ->
             Column {
                 Text(
-                    text = "Detalles del Trabajo",
+                    text = if (state.isOwner) "Detalles de mi Tarea" else "Detalles del Trabajo",
                     color = Color.White,
                     modifier = Modifier.fillMaxWidth().padding(20.dp),
                     textAlign = TextAlign.Center,
@@ -62,8 +63,9 @@ fun JobDetailScreen(
                             Column {
                                 Text(job.title, fontWeight = FontWeight.Bold, fontSize = 22.sp)
                                 Text("Categoría: ${job.category}", color = Color.Gray)
-                                Text("Pago: ${job.payment} MXN", color = Color.Gray)
-                                Text("Publicado hace: ${job.publishedAgo}", color = Color.Gray)
+                                Text("Pago: $${job.payment} MXN", color = Color.Gray)
+                                // Cambiamos publishedAgo por la ubicación, según tus requerimientos
+                                Text("Ubicación: ${job.locationApprox}", color = Color.Gray)
                             }
                         }
 
@@ -74,29 +76,53 @@ fun JobDetailScreen(
                                 Text("Descripción:", fontWeight = FontWeight.Bold)
                                 Text(job.description, color = Color.DarkGray)
                                 Spacer(Modifier.height(12.dp))
-                                Text("Fecha:", fontWeight = FontWeight.Bold); Text(job.date)
+                                Text("Fecha de realización:", fontWeight = FontWeight.Bold); Text(job.date)
                                 Text("Hora: ${job.time}", fontWeight = FontWeight.Bold)
                             }
                         }
 
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.height(32.dp))
 
-                        Button(
-                            onClick = { if (!job.isApplied) viewModel.onApplyClick() },
-                            modifier = Modifier.fillMaxWidth().height(56.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (job.isApplied) Color.Red else Color(0xFF9494FF)
-                            ),
-                            shape = RoundedCornerShape(28.dp),
-                            enabled = !state.isApplying
-                        ) {
-                            if (state.isApplying) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                            } else {
-                                Text(
-                                    text = if (job.isApplied) "Cancelar solicitud" else "Postularse para este trabajo",
-                                    fontSize = 16.sp, fontWeight = FontWeight.Bold
-                                )
+                        // --- LÓGICA DE BOTONES DINÁMICA ---
+                        if (state.isOwner) {
+                            // PANTALLA DE DETALLES (Caso Dueño: Editar o Borrar)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = { /* Navegar a pantalla editar */ },
+                                    modifier = Modifier.weight(1f).height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA500)),
+                                    shape = RoundedCornerShape(28.dp)
+                                ) {
+                                    Text("Editar", fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = { /* viewModel.confirmDelete() */ },
+                                    modifier = Modifier.weight(1f).height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                    shape = RoundedCornerShape(28.dp)
+                                ) {
+                                    Text("Borrar", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else {
+                            // PANTALLA DE DETALLES (Caso Trabajador: Postularse o Cancelar)
+                            Button(
+                                onClick = { viewModel.onMainActionClick() },
+                                modifier = Modifier.fillMaxWidth().height(56.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (state.isApplied) Color.Red else Color(0xFF9494FF)
+                                ),
+                                shape = RoundedCornerShape(28.dp),
+                                enabled = !state.isActionLoading
+                            ) {
+                                if (state.isActionLoading) {
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                } else {
+                                    Text(
+                                        text = if (state.isApplied) "Cancelar postulación" else "Postularse al trabajo",
+                                        fontSize = 16.sp, fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
@@ -104,11 +130,12 @@ fun JobDetailScreen(
             }
         }
 
+        // Diálogo de Confirmación
         if (state.showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.onDismissDialog() },
                 confirmButton = {
-                    TextButton(onClick = { viewModel.confirmApplication(state.job?.id ?: "") }) { Text("Confirmar") }
+                    TextButton(onClick = { viewModel.confirmApplication() }) { Text("Confirmar") }
                 },
                 dismissButton = {
                     TextButton(onClick = { viewModel.onDismissDialog() }) { Text("Cancelar") }
@@ -118,11 +145,9 @@ fun JobDetailScreen(
             )
         }
 
+        // Mensajes de Feedback
         state.userMessage?.let {
-            Text(it, color = Color(0xFF4CAF50), modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-        }
-        state.errorMessage?.let {
-            Text(it, color = Color.Red, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 100.dp), fontWeight = FontWeight.Bold)
+            Snackbar(modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)) { Text(it) }
         }
     }
 }
