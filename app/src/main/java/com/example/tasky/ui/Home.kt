@@ -10,18 +10,24 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    viewModel: HomeViewModel,
     onNavigateToCreateJob: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onJobClick: (String) -> Unit
 ) {
+    val jobs = viewModel.jobs
+    val isLoading = viewModel.isLoading
+
     Scaffold(
         bottomBar = {
             NavigationBar {
@@ -115,15 +121,24 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            items(5) {
-                                JobCard(
-                                    title = "Pintar la fachada de una casa",
-                                    description = "Se necesita a alguien con experiencia para pintar chido...",
-                                    payment = "500 MXN",
-                                    timeAgo = "2 hrs",
-                                    onClick = { onJobClick("id_del_trabajo") }
-                                )
+                        if (isLoading) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = Color(0xFF7B8EDB))
+                            }
+                        } else {
+                            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(jobs) { job ->
+                                    JobCard(
+                                        title = job.title,
+                                        description = job.description ?: "Sin descripción",
+                                        payment = "${job.payment} MXN",
+                                        timeAgo = "Reciente",
+                                        onClick = { onJobClick(job.id ?: "") }
+                                    )
+                                }
                             }
                         }
                     }

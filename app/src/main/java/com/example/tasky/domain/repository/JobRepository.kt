@@ -9,9 +9,9 @@ interface JobRepository {
 
     suspend fun cancelApplication(jobId: String): Result<Unit>
 
-
-
+    suspend fun getJobs(): Result<List<Job>>
 
     suspend fun getJobById(jobId: String): Result<Job>
+
     suspend fun deleteJob(jobId: String): Result<Unit>
 }

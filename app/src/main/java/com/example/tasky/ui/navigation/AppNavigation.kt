@@ -16,6 +16,7 @@ import com.example.tasky.ui.jobs.detail.JobDetailScreen
 import com.example.tasky.ui.jobs.detail.JobDetailViewModel
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
 import com.example.tasky.data.repository.JobRepositoryImpl
+import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
 
 @Composable
@@ -83,13 +84,18 @@ fun AppNavigation() {
                 JobDetailViewModel(repository, useCase)
             }
 
-            JobDetailScreen(jobId = jobId, viewModel = detailViewModel)
+            JobDetailScreen(jobId = jobId, viewModel = detailViewModel, onNavigateBack = { navController.popBackStack() })
         }
 
         // Aquí se inyectan las rutas de navegación al HomeScreen
         composable("home") {
+            val homeViewModel = remember {
+                HomeViewModel(JobRepositoryImpl())
+            }
+
             // Asegurar que el import apunte a com.example.tasky.ui.HomeScreen
             com.example.tasky.ui.HomeScreen(
+                viewModel = homeViewModel,
                 onNavigateToCreateJob = {
                     navController.navigate("create_job")
                 },

@@ -2,10 +2,12 @@ package com.example.tasky.data.repository
 
 import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.data.remote.dto.JobDto
+import com.example.tasky.data.remote.dto.toDomain
 import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.repository.JobRepository
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -42,6 +44,17 @@ class JobRepositoryImpl : JobRepository {
                 }
             }
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getJobs(): Result<List<Job>> {
+        return try {
+            val jobsDto = SupabaseClient.client.from("trabajos")
+                .select()
+                .decodeList<JobDto>()
+            Result.success(jobsDto.map { it.toDomain() })
         } catch (e: Exception) {
             Result.failure(e)
         }
