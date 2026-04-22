@@ -21,7 +21,8 @@ fun LoginScreen(
     state: LoginState,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onLogin: () -> Unit
+    onLogin: () -> Unit,
+    onNavigateToRegister: () -> Unit
 ) {
 
     Box(
@@ -105,6 +106,13 @@ fun LoginScreen(
                         Text("Iniciar sesión")
                     }
 
+                    TextButton(
+                        onClick = onNavigateToRegister,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("¿No tienes cuenta? Regístrate")
+                    }
+
                     if (state.isLoading) {
                         CircularProgressIndicator()
                     }
@@ -119,7 +127,7 @@ fun LoginScreen(
 }
 
 @Composable
-fun LoginRoute(viewModel: LoginViewModel) {
+fun LoginRoute(viewModel: LoginViewModel, onNavigateToRegister: () -> Unit ) {
 
     val state = viewModel.state
 
@@ -127,7 +135,8 @@ fun LoginRoute(viewModel: LoginViewModel) {
         state = state,
         onEmailChange = viewModel::onEmailChange,
         onPasswordChange = viewModel::onPasswordChange,
-        onLogin = viewModel::login
+        onLogin = viewModel::login,
+        onNavigateToRegister = onNavigateToRegister
     )
 }
 
@@ -143,6 +152,7 @@ fun LoginPreview() {
         ),
         onEmailChange = {},
         onPasswordChange = {},
-        onLogin = {}
+        onLogin = {},
+        onNavigateToRegister = {}
     )
 }
