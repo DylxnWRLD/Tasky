@@ -14,27 +14,44 @@ class AuthRepositoryImpl : AuthRepository {
     override suspend fun register(
         email: String,
         password: String,
-        name: String
+        name: String,
+        role: String
     ): Result<Unit> {
         return try {
-            val result = supabase.auth.signUpWith(Email) {
-                this.email = email
-                this.password = password
+            // Registrar usuario en Auth
+            supabase.auth.signUpWith(Email) {
+                this.email = email.trim()
+                this.password = password.trim()
             }
 
+            // Obtener el ID del usuario recién creado
             val userId = supabase.auth.currentUserOrNull()?.id
-                ?: return Result.failure(Exception("Error al registrar"))
+            if (userId == null) {
+                println("DEBUG_TASKY: No se pudo obtener el ID del usuario después del registro")
+                return Result.failure(Exception("Error al obtener el ID del usuario"))
+            }
 
-            supabase.from("users").insert(
-                mapOf(
-                    "id" to userId,
-                    "email" to email,
-                    "name" to name,
-                    "role" to "CLIENT"
-                )
-            )
+            println("DEBUG_TASKY: Usuario registrado con ID: $userId")
+
+
+            try {
+                supabase.from("users").update(
+                    mapOf(
+                        "name" to name.trim(),
+                        "role" to role
+                    )
+                ) {
+                    filter { eq("id", userId) }
+                }
+                println("DEBUG_TASKY: Usuario actualizado exitosamente")
+            } catch (e: Exception) {
+                println("DEBUG_TASKY: Error actualizando usuario -> ${e.localizedMessage}")
+
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
+            println("DEBUG_TASKY: Error en registro -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }
