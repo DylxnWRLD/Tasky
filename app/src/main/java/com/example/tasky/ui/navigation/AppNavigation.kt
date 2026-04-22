@@ -1,5 +1,6 @@
 package com.example.tasky.ui.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
@@ -15,6 +16,7 @@ import com.example.tasky.ui.jobs.detail.JobDetailScreen
 import com.example.tasky.ui.jobs.detail.JobDetailViewModel
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
 import com.example.tasky.data.repository.JobRepositoryImpl
+import com.example.tasky.ui.create.CreateJobScreen
 
 @Composable
 fun AppNavigation() {
@@ -84,8 +86,40 @@ fun AppNavigation() {
             JobDetailScreen(jobId = jobId, viewModel = detailViewModel)
         }
 
+        // Aquí se inyectan las rutas de navegación al HomeScreen
         composable("home") {
-            com.example.tasky.ui.home.HomeScreen()
+            // Asegurar que el import apunte a com.example.tasky.ui.HomeScreen
+            com.example.tasky.ui.HomeScreen(
+                onNavigateToCreateJob = {
+                    navController.navigate("create_job")
+                },
+                onNavigateToProfile = {
+                    navController.navigate("profile")
+                },
+                onJobClick = { jobId ->
+                    navController.navigate("job_detail/$jobId")
+                }
+            )
+        }
+
+        // RUTA CREAR TRABAJO
+        composable("create_job") {
+            CreateJobScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onJobCreated = {
+                    // Lógica para después de insertar en la BD
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable("profile") {
+            androidx.compose.foundation.layout.Box(
+                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                androidx.compose.material3.Text("Pantalla de perfil en construcción...")
+            }
         }
     }
 }
