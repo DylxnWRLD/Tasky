@@ -22,9 +22,20 @@ class JobDetailViewModel(
     var state by mutableStateOf(JobDetailState())
         private set
 
+    enum class CancelResult {
+        CAN_CANCEL,
+        LESS_THAN_60_MIN,
+        ALREADY_STARTED
+    }
+
     fun loadJobById(jobId: String) {
         if (state.job?.id == jobId && !state.isLoading) return
+        fetchJobData(jobId)
+    }
+
+    private fun fetchJobData(jobId: String, onComplete: () -> Unit = {}) {
         state = state.copy(isLoading = true, errorMessage = null)
+
         viewModelScope.launch {
             repository.getJobById(jobId).onSuccess { job ->
                 state = state.copy(
@@ -33,38 +44,76 @@ class JobDetailViewModel(
                     isOwner = job.clientId == currentUserId,
                     isApplied = job.isApplied
                 )
+                onComplete()
             }.onFailure { error ->
-                state = state.copy(isLoading = false, errorMessage = "Error: ${error.localizedMessage}")
+                state = state.copy(
+                    isLoading = false,
+                    errorMessage = "Error: ${error.localizedMessage}"
+                )
             }
         }
     }
 
-    private fun canCancelApplication(): Boolean {
-        val job = state.job ?: return false
+    private fun checkCancelApplication(): CancelResult {
+        val job = state.job ?: return CancelResult.ALREADY_STARTED
+
         return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-            val jobDate = sdf.parse("${job.date} ${job.time}") ?: return false
+            val raw = "${job.date} ${job.time}"
+            println("TASKY_LOG: RAW -> $raw")
 
-            val now = Calendar.getInstance().time
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val jobDate = sdf.parse(raw) ?: return CancelResult.ALREADY_STARTED
 
-            val diffInMs = jobDate.time - now.time
-            val diffInMinutes = diffInMs / (1000 * 60)
+            val now = Date()
 
-            diffInMinutes >= 60
+            println("TASKY_LOG: Job -> $jobDate")
+            println("TASKY_LOG: Now -> $now")
+
+            val diffInMinutes = (jobDate.time - now.time) / (1000.0 * 60)
+
+            println("TASKY_LOG: Diff -> $diffInMinutes")
+
+            when {
+                diffInMinutes <= 0 -> CancelResult.ALREADY_STARTED
+                diffInMinutes < 60 -> CancelResult.LESS_THAN_60_MIN
+                else -> CancelResult.CAN_CANCEL
+            }
+
         } catch (e: Exception) {
-            false
+            e.printStackTrace()
+            CancelResult.ALREADY_STARTED
         }
     }
 
     fun onMainActionClick() {
+        val jobId = state.job?.id ?: return
+
         if (state.isApplied) {
-            if (canCancelApplication()) {
-                state = state.copy(showConfirmDialog = true)
-            } else {
-                state = state.copy(
-                    userMessage = "No puedes cancelar, faltan menos de 60 minutos."
-                )
+            state = state.copy(isActionLoading = true)
+
+            fetchJobData(jobId) {
+                state = state.copy(isActionLoading = false)
+
+                when (checkCancelApplication()) {
+
+                    CancelResult.CAN_CANCEL -> {
+                        state = state.copy(showConfirmDialog = true)
+                    }
+
+                    CancelResult.LESS_THAN_60_MIN -> {
+                        state = state.copy(
+                            userMessage = "No puedes cancelar, faltan menos de 60 minutos."
+                        )
+                    }
+
+                    CancelResult.ALREADY_STARTED -> {
+                        state = state.copy(
+                            userMessage = "Este trabajo ya comenzó o ya pasó."
+                        )
+                    }
+                }
             }
+
         } else {
             state = state.copy(showConfirmDialog = true)
         }
@@ -76,10 +125,18 @@ class JobDetailViewModel(
 
     fun confirmAction() {
         val jobId = state.job?.id ?: return
-        state = state.copy(showConfirmDialog = false, isActionLoading = true)
+
+        state = state.copy(
+            showConfirmDialog = false,
+            isActionLoading = true
+        )
 
         viewModelScope.launch {
-            if (state.isApplied) executeCancel(jobId) else executeApply(jobId)
+            if (state.isApplied) {
+                executeCancel(jobId)
+            } else {
+                executeApply(jobId)
+            }
         }
     }
 
@@ -92,7 +149,10 @@ class JobDetailViewModel(
                 userMessage = "¡Listo! Te has postulado."
             )
         }.onFailure {
-            state = state.copy(isActionLoading = false, userMessage = "Error al postularse.")
+            state = state.copy(
+                isActionLoading = false,
+                userMessage = "Error al postularse."
+            )
         }
     }
 
@@ -105,7 +165,10 @@ class JobDetailViewModel(
                 userMessage = "Postulación cancelada con éxito."
             )
         }.onFailure {
-            state = state.copy(isActionLoading = false, userMessage = "No se pudo cancelar.")
+            state = state.copy(
+                isActionLoading = false,
+                userMessage = "No se pudo cancelar."
+            )
         }
     }
 
