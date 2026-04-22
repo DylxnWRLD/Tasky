@@ -6,7 +6,10 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.example.tasky.ui.auth.LoginRoute
 import com.example.tasky.ui.auth.LoginViewModel
+import com.example.tasky.ui.auth.RegisterRoute
+import com.example.tasky.ui.auth.RegisterViewModel
 import com.example.tasky.domain.usecase.LoginUseCase
+import com.example.tasky.domain.usecase.RegisterUseCase
 import com.example.tasky.data.repository.AuthRepositoryImpl
 import com.example.tasky.ui.jobs.detail.JobDetailScreen
 import com.example.tasky.ui.jobs.detail.JobDetailViewModel
@@ -32,12 +35,38 @@ fun AppNavigation() {
 
             LaunchedEffect(state.user) {
                 if (state.user != null) {
-                    navController.navigate("job_detail/2778f89d-83f1-4468-aff6-736818c7fb45") {                        popUpTo("login") { inclusive = true }
+                    navController.navigate("home") {
+                        popUpTo("login") { inclusive = true }
                     }
                 }
             }
 
-            LoginRoute(viewModel = viewModel)
+            LoginRoute(
+                viewModel = viewModel,
+                onNavigateToRegister = {
+                    navController.navigate("register")
+                }
+            )
+        }
+
+        composable("register") {
+            val viewModel = remember {
+                val repository = AuthRepositoryImpl()
+                val useCase = RegisterUseCase(repository)
+                RegisterViewModel(useCase)
+            }
+
+            RegisterRoute(
+                viewModel = viewModel,
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
+                onRegisterSuccess = {
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(
