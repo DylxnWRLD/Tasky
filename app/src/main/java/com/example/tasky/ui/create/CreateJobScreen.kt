@@ -1,182 +1,226 @@
 package com.example.tasky.ui.create
 
-import androidx.compose.foundation.background
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.AsyncImage
+import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
+import org.osmdroid.views.overlay.Marker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateJobScreen(
     onNavigateBack: () -> Unit,
-    onJobCreated: () -> Unit
+    onJobCreated: (imageUri: Uri?, location: GeoPoint, title: String, category: String, payment: Double, description: String, date: String, time: String) -> Unit
 ) {
+    val context = LocalContext.current
+
+    // Estados de los campos (Esquema de BD)
     var title by remember { mutableStateOf("") }
     var payment by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
 
-    // Estado para el Combo Box de Categoría
+    // Estado para Categoría (Combo Box)
     var expanded by remember { mutableStateOf(false) }
-    val categorias = listOf("Jardinería", "Limpieza", "Carpintería", "Plomería", "Mecánica", "Electricidad")
+    val categorias = listOf("Jardinería", "Limpieza", "Carpintería", "Plomería", "Mecánica", "Electricidad", "Hogar")
     var selectedCategory by remember { mutableStateOf(categorias[0]) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF7B8EDB))
-    ) {
+    // Estados de Imagen y Mapa
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedLocation by remember { mutableStateOf(GeoPoint(19.5438, -96.9102)) }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> imageUri = uri }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF7B8EDB))) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // Encabezado consistente con el diseño
+            // Encabezado estático
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 40.dp, start = 16.dp, end = 24.dp, bottom = 20.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 40.dp, start = 16.dp, bottom = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
+                    Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
                 }
-                Text(
-                    text = "Publicar Trabajo",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Publicar Trabajo", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
             }
 
-            // Cuerpo del formulario en la tarjeta blanca con bordes de 40dp
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
                 color = Color(0xFFF5F5F5)
             ) {
-                Column(
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        "Detalles de la chamba",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                Column(modifier = Modifier.padding(24.dp).fillMaxSize()) {
 
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("Título del trabajo") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp)
-                    )
-
-                    // Combo Box (Exposed Dropdown Menu) para la Categoría
-                    ExposedDropdownMenuBox(
-                        expanded = expanded,
-                        onExpandedChange = { expanded = !expanded }
+                    // Contenedor con Scroll para los campos (usa weight para empujar el botón)
+                    Column(
+                        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        OutlinedTextField(
-                            value = selectedCategory,
-                            onValueChange = {},
-                            readOnly = true, // Evita que escriban cosas raras
-                            label = { Text("Categoría") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        Text("Detalles de la chamba", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+                        // 1. Imagen (Miniatura)
+                        Box(
                             modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth(),
+                                .fillMaxWidth()
+                                .height(150.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White)
+                                .border(1.dp, Color.LightGray, RoundedCornerShape(16.dp))
+                                .clickable { galleryLauncher.launch("image/*") },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (imageUri != null) {
+                                AsyncImage(model = imageUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } else {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = Color.Gray)
+                                    Text("Añadir miniatura", color = Color.Gray)
+                                }
+                            }
+                        }
+
+                        // 2. Título
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it },
+                            label = { Text("¿Qué hay que hacer?") },
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp)
                         )
 
-                        ExposedDropdownMenu(
+                        // 3. Categoría (Combo Box / Dropdown)
+                        ExposedDropdownMenuBox(
                             expanded = expanded,
-                            onDismissRequest = { expanded = false }
+                            onExpandedChange = { expanded = !expanded }
                         ) {
-                            categorias.forEach { categoria ->
-                                DropdownMenuItem(
-                                    text = { Text(categoria) },
-                                    onClick = {
-                                        selectedCategory = categoria
-                                        expanded = false
-                                    },
-                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
-                                )
+                            OutlinedTextField(
+                                value = selectedCategory,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Categoría") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                categorias.forEach { item ->
+                                    DropdownMenuItem(
+                                        text = { Text(item) },
+                                        onClick = { selectedCategory = item; expanded = false }
+                                    )
+                                }
                             }
                         }
+
+                        // 4. Pago
+                        OutlinedTextField(
+                            value = payment,
+                            onValueChange = { payment = it },
+                            label = { Text("Pago estimado (MXN)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            prefix = { Text("$ ") }
+                        )
+
+                        // 5. Mapa (Ubicación exacta)
+                        Text("Selecciona la ubicación", fontWeight = FontWeight.Bold)
+                        Surface(modifier = Modifier.fillMaxWidth().height(250.dp), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color.LightGray)) {
+                            AndroidView(
+                                modifier = Modifier.fillMaxSize(),
+                                factory = { ctx ->
+                                    Configuration.getInstance().userAgentValue = ctx.packageName
+                                    MapView(ctx).apply {
+                                        setTileSource(TileSourceFactory.MAPNIK)
+                                        setMultiTouchControls(true)
+                                        controller.setZoom(16.0)
+                                        controller.setCenter(selectedLocation)
+                                        val marker = Marker(this).apply {
+                                            position = selectedLocation
+                                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                        }
+                                        overlays.add(marker)
+                                        overlays.add(MapEventsOverlay(object : MapEventsReceiver {
+                                            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                                                p?.let { selectedLocation = it; marker.position = it; invalidate() }
+                                                return true
+                                            }
+                                            override fun longPressHelper(p: GeoPoint?): Boolean = false
+                                        }))
+                                    }
+                                }
+                            )
+                        }
+
+                        // 6. Descripción
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Descripción detallada") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            minLines = 3
+                        )
+
+                        // 7. Fecha y Hora
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = date,
+                                onValueChange = { date = it },
+                                label = { Text("Fecha") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(16.dp),
+                                trailingIcon = { Icon(Icons.Default.CalendarMonth, null) }
+                            )
+                            OutlinedTextField(
+                                value = time,
+                                onValueChange = { time = it },
+                                label = { Text("Hora") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(16.dp),
+                                trailingIcon = { Icon(Icons.Default.AccessTime, null) }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    OutlinedTextField(
-                        value = payment,
-                        onValueChange = { payment = it },
-                        label = { Text("Pago estimado (MXN)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        prefix = { Text("$ ") }
-                    )
-
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Descripción de la tarea") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        minLines = 3
-                    )
-
-                    OutlinedTextField(
-                        value = location,
-                        onValueChange = { location = it },
-                        label = { Text("Ubicación aproximada") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        leadingIcon = { Icon(Icons.Default.LocationOn, null) }
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = date,
-                            onValueChange = { date = it },
-                            label = { Text("Fecha") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            trailingIcon = { Icon(Icons.Default.CalendarMonth, null) }
-                        )
-                        OutlinedTextField(
-                            value = time,
-                            onValueChange = { time = it },
-                            label = { Text("Hora") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            trailingIcon = { Icon(Icons.Default.AccessTime, null) }
-                        )
-                    }
-
+                    // BOTÓN ESTÁTICO (Fuera del scroll)
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Button(
-                        onClick = { onJobCreated() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
+                        onClick = {
+                            val paymentAmount = payment.toDoubleOrNull() ?: 0.0
+                            onJobCreated(imageUri, selectedLocation, title, selectedCategory, paymentAmount, description, date, time)
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB))
                     ) {
-                        Text("Publicar ahora", style = MaterialTheme.typography.titleMedium)
+                        Text("Publicar ahora", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

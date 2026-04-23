@@ -1,5 +1,6 @@
 package com.example.tasky.ui.navigation
 
+import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.navigation.NavType
@@ -18,6 +19,7 @@ import com.example.tasky.domain.usecase.ApplyToJobUseCase
 import com.example.tasky.data.repository.JobRepositoryImpl
 import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
+import org.osmdroid.util.GeoPoint
 
 @Composable
 fun AppNavigation() {
@@ -112,8 +114,8 @@ fun AppNavigation() {
         composable("create_job") {
             CreateJobScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onJobCreated = {
-                    // Lógica para después de insertar en la BD
+                onJobCreated = { imageUri, location, title, category, payment, description, date, time ->
+                    // Aquí después se le pasará toda esta info al ViewModel para subirla a la BD
                     navController.popBackStack()
                 }
             )
