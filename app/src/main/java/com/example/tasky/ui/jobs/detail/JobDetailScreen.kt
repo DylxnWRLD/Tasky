@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
@@ -13,7 +14,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 @Composable
 fun JobDetailScreen(
@@ -27,7 +34,6 @@ fun JobDetailScreen(
         viewModel.loadJobById(jobId)
     }
 
-    // Fondo azulito consistente con el login y Home
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF7B8EDB))) {
         if (state.isLoading && state.job == null) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center), color = Color.White)
@@ -36,7 +42,7 @@ fun JobDetailScreen(
         state.job?.let { job ->
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // Encabezado con el botón de retroceso igual que en CreateJob
+                // --- ENCABEZADO ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -54,11 +60,11 @@ fun JobDetailScreen(
                     )
                 }
 
-                // Tarjeta principal con el borde curvo a 40.dp
+                // --- CUERPO PRINCIPAL (TARJETA BLANCA) ---
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
-                    color = Color(0xFFF5F5F5) // Mismo color hueso/gris claro de las otras vistas
+                    color = Color(0xFFF5F5F5)
                 ) {
                     Column(
                         modifier = Modifier
@@ -66,8 +72,8 @@ fun JobDetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                     ) {
+                        // Resumen superior (Imagen + Título + Pago)
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            // Cuadro para la imagen (o imagen de Coil si viene de red)
                             Surface(
                                 modifier = Modifier.size(80.dp),
                                 color = Color(0xFFE0E0E0),
@@ -86,13 +92,12 @@ fun JobDetailScreen(
                                 Spacer(Modifier.height(4.dp))
                                 Text("Categoría: ${job.category}", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                                 Text("Pago: $${job.payment} MXN", color = Color(0xFF7B8EDB), fontWeight = FontWeight.Bold)
-                                Text("Ubicación: ${job.locationApprox}", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                             }
                         }
 
                         Spacer(Modifier.height(24.dp))
 
-                        // Tarjeta de descripción con el mismo redondeo de 16.dp
+                        // 1. TARJETA DE DESCRIPCIÓN
                         Surface(
                             color = Color.White,
                             shape = RoundedCornerShape(16.dp),
@@ -102,28 +107,107 @@ fun JobDetailScreen(
                                 Text("Descripción", fontWeight = FontWeight.Bold, color = Color.Black)
                                 Spacer(Modifier.height(8.dp))
                                 Text(job.description ?: "Sin descripción.", color = Color.DarkGray, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
 
-                                Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                        // --- NUEVA SECCIÓN DE UBICACIÓN CON MAPA ESTÁTICO ---
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        tint = Color(0xFF7B8EDB),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        "Ubicación exacta",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color.Black
+                                    )
+                                }
+
+                                Spacer(Modifier.height(12.dp))
+
+                                // Convertir String de Supabase a GeoPoint de Osmdroid
+                                val locationPoint = remember(job.locationApprox) {
+                                    try {
+                                        val coords = job.locationApprox.split(",")
+                                        GeoPoint(coords[0].toDouble(), coords[1].toDouble())
+                                    } catch (e: Exception) {
+                                        GeoPoint(19.5438, -96.9102)
+                                    }
+                                }
+
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp), // Altura para que respire la pantalla
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, Color.LightGray)
                                 ) {
-                                    Column {
-                                        Text("Fecha", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
-                                        Text(job.date, color = Color.Black)
-                                    }
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text("Hora", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
-                                        Text(job.time, color = Color.Black)
-                                    }
+                                    AndroidView(
+                                        modifier = Modifier.fillMaxSize(),
+                                        factory = { ctx ->
+                                            MapView(ctx).apply {
+                                                setTileSource(TileSourceFactory.MAPNIK)
+                                                setMultiTouchControls(false)
+                                                setBuiltInZoomControls(false)
+
+                                                controller.setZoom(17.5)
+                                                controller.setCenter(locationPoint)
+
+                                                val marker = Marker(this).apply {
+                                                    position = locationPoint
+                                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                                    title = job.title
+                                                }
+                                                overlays.add(marker)
+                                            }
+                                        },
+                                        update = { mapView ->
+                                            mapView.controller.animateTo(locationPoint)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // 3. TARJETA DE FECHA Y HORA
+                        Surface(
+                            color = Color.White,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("Fecha", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
+                                    Text(job.date, color = Color.Black)
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Hora", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.Gray)
+                                    Text(job.time, color = Color.Black)
                                 }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Botones con las formas consistentes
+                        // --- BOTONES DE ACCIÓN ---
                         if (state.isOwner) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Button(
@@ -141,7 +225,7 @@ fun JobDetailScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                                     shape = RoundedCornerShape(16.dp)
                                 ) {
-                                    Text("Borrar", fontWeight = FontWeight.Bold)
+                                    Text("Borrar", fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                         } else {
@@ -152,13 +236,13 @@ fun JobDetailScreen(
                                     containerColor = when {
                                         state.isLoading -> Color.LightGray
                                         state.isApplied -> Color.Red
-                                        else -> Color(0xFF7B8EDB) // Mismo azul del encabezado
+                                        else -> Color(0xFF7B8EDB)
                                     }
                                 ),
                                 shape = RoundedCornerShape(16.dp),
                                 enabled = !state.isActionLoading && !state.isLoading
                             ) {
-                                if (state.isActionLoading || (state.isLoading && state.job != null)) {
+                                if (state.isActionLoading) {
                                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                                 } else {
                                     Text(
@@ -168,11 +252,14 @@ fun JobDetailScreen(
                                 }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
             }
         }
 
+        // --- DIÁLOGOS Y NOTIFICACIONES ---
         if (state.showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.onDismissDialog() },
@@ -182,11 +269,11 @@ fun JobDetailScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { viewModel.onDismissDialog() }) { Text("Cancelar") }
+                    TextButton(onClick = { viewModel.onDismissDialog() }) { Text("Volver") }
                 },
                 title = { Text("Confirmación") },
                 text = {
-                    Text(if (state.isApplied) "¿Estás seguro de que quieres cancelar?" else "¿Quieres postularte?")
+                    Text(if (state.isApplied) "¿Estás seguro de que quieres cancelar tu postulación?" else "¿Quieres postularte para este trabajo?")
                 }
             )
         }
@@ -199,7 +286,7 @@ fun JobDetailScreen(
                 }
             ) { Text(message) }
             LaunchedEffect(message) {
-                kotlinx.coroutines.delay(3000)
+                delay(3000)
                 viewModel.clearUserMessage()
             }
         }
