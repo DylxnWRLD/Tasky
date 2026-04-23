@@ -122,6 +122,7 @@ fun AppNavigation() {
             }
 
             CreateJobScreen(
+                viewModel = createViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onJobCreated = { imageUri, location, title, category, payment, description, date, time ->
                     createViewModel.publicarChamba(

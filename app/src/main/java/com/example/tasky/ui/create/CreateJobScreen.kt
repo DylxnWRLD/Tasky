@@ -26,10 +26,12 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import com.example.tasky.ui.create.CreateJobViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateJobScreen(
+    viewModel: CreateJobViewModel,
     onNavigateBack: () -> Unit,
     onJobCreated: (imageUri: Uri?, location: GeoPoint, title: String, category: String, payment: Double, description: String, date: String, time: String) -> Unit
 ) {
@@ -247,6 +249,29 @@ fun CreateJobScreen(
                         Text("Publicar ahora", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                     }
                 }
+            }
+        }
+        if (viewModel.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color.White)
+            }
+        }
+
+        viewModel.errorMessage?.let { errorMsg ->
+            Snackbar(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                action = {
+                    TextButton(onClick = { viewModel.resetState() }) {
+                        Text("OK", color = Color.White)
+                    }
+                }
+            ) {
+                Text(errorMsg)
             }
         }
     }
