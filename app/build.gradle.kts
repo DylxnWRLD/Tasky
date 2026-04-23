@@ -72,6 +72,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:supabase-kt:2.6.1")
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.6.1")
     implementation("io.github.jan-tennert.supabase:gotrue-kt:2.6.1")
+    implementation("io.github.jan-tennert.supabase:storage-kt:2.6.1")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

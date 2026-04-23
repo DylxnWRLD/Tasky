@@ -13,8 +13,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class JobDetailViewModel(
-    private val repository: JobRepository = JobRepositoryImpl(),
-    private val applyToJobUseCase: ApplyToJobUseCase = ApplyToJobUseCase(repository),
+    private val repository: JobRepository,
+    private val applyToJobUseCase: ApplyToJobUseCase,
     private val cancelApplicationUseCase: CancelApplicationUseCase = CancelApplicationUseCase(repository),
     private val currentUserId: String? = SupabaseClient.client.auth.currentUserOrNull()?.id
 ) : ViewModel() {

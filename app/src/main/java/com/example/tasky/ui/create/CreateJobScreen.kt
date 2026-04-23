@@ -42,6 +42,12 @@ fun CreateJobScreen(
     var date by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
 
+    // Estados de error para las validaciones
+    var titleError by remember { mutableStateOf(false) }
+    var paymentError by remember { mutableStateOf(false) }
+    var descError by remember { mutableStateOf(false) }
+    var dateTimeError by remember { mutableStateOf(false) }
+
     // Estado para Categoría (Combo Box)
     var expanded by remember { mutableStateOf(false) }
     val categorias = listOf("Jardinería", "Limpieza", "Carpintería", "Plomería", "Mecánica", "Electricidad", "Hogar")
@@ -76,7 +82,6 @@ fun CreateJobScreen(
             ) {
                 Column(modifier = Modifier.padding(24.dp).fillMaxSize()) {
 
-                    // Contenedor con Scroll para los campos (usa weight para empujar el botón)
                     Column(
                         modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -107,8 +112,10 @@ fun CreateJobScreen(
                         // 2. Título
                         OutlinedTextField(
                             value = title,
-                            onValueChange = { title = it },
+                            onValueChange = { title = it; titleError = false },
                             label = { Text("¿Qué hay que hacer?") },
+                            isError = titleError,
+                            supportingText = { if (titleError) Text("Ponle un título") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp)
                         )
@@ -142,6 +149,8 @@ fun CreateJobScreen(
                             value = payment,
                             onValueChange = { payment = it },
                             label = { Text("Pago estimado (MXN)") },
+                            isError = paymentError,
+                            supportingText = { if (paymentError) Text("Pon una cantidad válida") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             prefix = { Text("$ ") }
@@ -179,8 +188,10 @@ fun CreateJobScreen(
                         // 6. Descripción
                         OutlinedTextField(
                             value = description,
-                            onValueChange = { description = it },
+                            onValueChange = { description = it; descError = false },
                             label = { Text("Descripción detallada") },
+                            isError = descError,
+                            supportingText = { if (descError) Text("Escribe de qué trata la chamba") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                             minLines = 3
@@ -190,20 +201,23 @@ fun CreateJobScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(
                                 value = date,
-                                onValueChange = { date = it },
+                                onValueChange = { date = it; dateTimeError = false },
                                 label = { Text("Fecha") },
+                                isError = dateTimeError,
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(16.dp),
-                                trailingIcon = { Icon(Icons.Default.CalendarMonth, null) }
+                                shape = RoundedCornerShape(16.dp)
                             )
                             OutlinedTextField(
                                 value = time,
-                                onValueChange = { time = it },
+                                onValueChange = { time = it; dateTimeError = false },
                                 label = { Text("Hora") },
+                                isError = dateTimeError,
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(16.dp),
-                                trailingIcon = { Icon(Icons.Default.AccessTime, null) }
+                                shape = RoundedCornerShape(16.dp)
                             )
+                        }
+                        if (dateTimeError) {
+                            Text("Falta la fecha o la hora", color = Color.Red, style = MaterialTheme.typography.bodySmall)
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -213,8 +227,18 @@ fun CreateJobScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = {
-                            val paymentAmount = payment.toDoubleOrNull() ?: 0.0
-                            onJobCreated(imageUri, selectedLocation, title, selectedCategory, paymentAmount, description, date, time)
+                            // Checar que no vengan vacíos ni con formatos pendejos
+                            val pagoValidado = payment.toDoubleOrNull()
+
+                            titleError = title.trim().isEmpty()
+                            paymentError = pagoValidado == null || pagoValidado <= 0.0
+                            descError = description.trim().isEmpty()
+                            dateTimeError = date.trim().isEmpty() || time.trim().isEmpty()
+
+                            // Si todo está al cien, se lanza el evento
+                            if (!titleError && !paymentError && !descError && !dateTimeError) {
+                                onJobCreated(imageUri, selectedLocation, title, selectedCategory, pagoValidado!!, description, date, time)
+                            }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),

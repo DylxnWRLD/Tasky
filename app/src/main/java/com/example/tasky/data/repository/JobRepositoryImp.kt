@@ -1,17 +1,21 @@
 package com.example.tasky.data.repository
 
+import android.content.Context
+import android.net.Uri
 import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.data.remote.dto.JobDto
+import com.example.tasky.data.remote.dto.JobInsertDto
 import com.example.tasky.data.remote.dto.toDomain
 import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.repository.JobRepository
-import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class JobRepositoryImpl : JobRepository {
+class JobRepositoryImpl(private val context: Context) : JobRepository {
 
     private val client = SupabaseClient.client
 
@@ -113,6 +117,30 @@ class JobRepositoryImpl : JobRepository {
             client.postgrest.from("trabajos").delete {
                 filter { eq("id", jobId) }
             }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun uploadJobImage(uri: Uri): Result<String> {
+        return try {
+            val fileName = "job_${System.currentTimeMillis()}.jpg"
+            // Se necesitan los bytes de la imagen. Aquí un ejemplo rápido:
+            val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                ?: throw Exception("No se pudo leer la imagen")
+
+            val path = SupabaseClient.client.storage.from("Detalles Trabajo").upload(fileName, bytes)
+            val publicUrl = SupabaseClient.client.storage.from("Detalles Trabajo").publicUrl(fileName)
+            Result.success(publicUrl)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun insertJob(job: JobInsertDto): Result<Unit> {
+        return try {
+            SupabaseClient.client.from("trabajos").insert(job)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
