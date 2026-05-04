@@ -7,9 +7,8 @@ import kotlinx.serialization.Serializable
 data class ApplicationDto(
     @SerialName("job_id")
     val jobId: String,
-
     @SerialName("worker_id")
     val workerId: String,
-
-    val status: String = "pendiente"
+    val status: String = "pendiente",
+    val users: UserDto
 )

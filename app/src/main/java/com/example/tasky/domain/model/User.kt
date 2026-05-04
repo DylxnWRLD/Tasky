@@ -19,5 +19,8 @@ data class User(
 
     val bio: String? = null,
 
-    val skills: List<String>? = null
+    val skills: List<String>? = null,
+
+    val description: String? = null,
+    val rating: Double = 0.0
 )

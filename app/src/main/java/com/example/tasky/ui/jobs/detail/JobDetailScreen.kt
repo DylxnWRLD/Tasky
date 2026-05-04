@@ -26,7 +26,8 @@ import org.osmdroid.views.overlay.Marker
 fun JobDetailScreen(
     jobId: String,
     viewModel: JobDetailViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    navegarAplicantes: (String) -> Unit
 ) {
     val state = viewModel.state
 
@@ -112,7 +113,7 @@ fun JobDetailScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // --- NUEVA SECCIÓN DE UBICACIÓN CON MAPA ESTÁTICO ---
+                        // 2. SECCIÓN DE UBICACIÓN
                         Surface(
                             color = Color.White,
                             shape = RoundedCornerShape(16.dp),
@@ -137,7 +138,6 @@ fun JobDetailScreen(
 
                                 Spacer(Modifier.height(12.dp))
 
-                                // Convertir String de Supabase a GeoPoint de Osmdroid
                                 val locationPoint = remember(job.locationApprox) {
                                     try {
                                         val coords = job.locationApprox.split(",")
@@ -150,7 +150,7 @@ fun JobDetailScreen(
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(180.dp), // Altura para que respire la pantalla
+                                        .height(180.dp),
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, Color.LightGray)
                                 ) {
@@ -161,10 +161,8 @@ fun JobDetailScreen(
                                                 setTileSource(TileSourceFactory.MAPNIK)
                                                 setMultiTouchControls(false)
                                                 setBuiltInZoomControls(false)
-
                                                 controller.setZoom(17.5)
                                                 controller.setCenter(locationPoint)
-
                                                 val marker = Marker(this).apply {
                                                     position = locationPoint
                                                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
@@ -180,7 +178,6 @@ fun JobDetailScreen(
                                 }
                             }
                         }
-
 
                         Spacer(Modifier.height(16.dp))
 
@@ -207,34 +204,52 @@ fun JobDetailScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // --- BOTONES DE ACCIÓN ---
+                        // --- BOTONES DE ACCIÓN (ACTUALIZADO PARA CU-15) ---
                         if (state.isOwner) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                // BOTÓN DE VER POSTULANTES
                                 Button(
-                                    onClick = { /* Navegar a editar */ },
-                                    modifier = Modifier.weight(1f).height(56.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                                    shape = RoundedCornerShape(16.dp),
-                                    border = BorderStroke(1.dp, Color.Gray)
-                                ) {
-                                    Text("Editar", fontWeight = FontWeight.Bold, color = Color.Black)
-                                }
-                                Button(
-                                    onClick = { /* Borrar */ },
-                                    modifier = Modifier.weight(1f).height(56.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                    onClick = { navegarAplicantes(jobId) },
+                                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB)),
                                     shape = RoundedCornerShape(16.dp)
                                 ) {
-                                    Text("Borrar", fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text("Ver postulantes", fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Button(
+                                        onClick = { /* Navegar a editar */ },
+                                        modifier = Modifier.weight(1f).height(56.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                                        shape = RoundedCornerShape(16.dp),
+                                        border = BorderStroke(1.dp, Color.Gray)
+                                    ) {
+                                        Text("Editar", fontWeight = FontWeight.Bold, color = Color.Black)
+                                    }
+                                    Button(
+                                        onClick = { /* Borrar */ },
+                                        modifier = Modifier.weight(1f).height(56.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Text("Borrar", fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
                                 }
                             }
                         } else {
+                            // Botón para postulantes (Trabajadores)
                             Button(
                                 onClick = { viewModel.onMainActionClick() },
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = when {
-                                        state.isLoading -> Color.LightGray
                                         state.isApplied -> Color.Red
                                         else -> Color(0xFF7B8EDB)
                                     }

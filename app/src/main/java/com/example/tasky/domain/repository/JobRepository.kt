@@ -3,6 +3,7 @@ package com.example.tasky.domain.repository
 import android.net.Uri
 import com.example.tasky.data.remote.dto.JobInsertDto
 import com.example.tasky.domain.model.Job
+import com.example.tasky.domain.model.User
 
 interface JobRepository {
 
@@ -20,4 +21,6 @@ interface JobRepository {
     suspend fun uploadJobImage(uri: Uri): Result<String>
 
     suspend fun insertJob(job: JobInsertDto): Result<Unit>
+
+    suspend fun getApplicantsByJobId(jobId: String): Result<List<User>>
 }

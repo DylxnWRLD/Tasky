@@ -21,7 +21,10 @@ import com.example.tasky.data.repository.AuthRepositoryImpl
 import com.example.tasky.data.repository.ForgotPasswordRepositoryImpl
 import com.example.tasky.ui.jobs.detail.JobDetailScreen
 import com.example.tasky.ui.jobs.detail.JobDetailViewModel
+import com.example.tasky.ui.jobs.detail.JobApplicantsScreen
+import com.example.tasky.ui.jobs.detail.JobApplicantsViewModel
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
+import com.example.tasky.domain.usecase.GetApplicantsUseCase
 import com.example.tasky.data.repository.JobRepositoryImpl
 import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
@@ -38,6 +41,7 @@ fun AppNavigation() {
         navController = navController,
         startDestination = "login"
     ) {
+        // --- AUTENTICACIÓN ---
         composable("login") {
             val viewModel = remember {
                 val repository = AuthRepositoryImpl()
@@ -46,7 +50,6 @@ fun AppNavigation() {
             }
 
             val state = viewModel.state
-
             LaunchedEffect(state.user) {
                 if (state.user != null) {
                     navController.navigate("home") {
@@ -57,12 +60,8 @@ fun AppNavigation() {
 
             LoginRoute(
                 viewModel = viewModel,
-                onNavigateToRegister = {
-                    navController.navigate("register")
-                },
-                onNavigateToForgotPassword = {
-                    navController.navigate("forgot_password")
-                }
+                onNavigateToRegister = { navController.navigate("register") },
+                onNavigateToForgotPassword = { navController.navigate("forgot_password") }
             )
         }
 
@@ -75,9 +74,7 @@ fun AppNavigation() {
 
             RegisterRoute(
                 viewModel = viewModel,
-                onNavigateToLogin = {
-                    navController.popBackStack()
-                },
+                onNavigateToLogin = { navController.popBackStack() },
                 onRegisterSuccess = {
                     navController.navigate("login") {
                         popUpTo("register") { inclusive = true }
@@ -86,7 +83,6 @@ fun AppNavigation() {
             )
         }
 
-        // Recuperación de contraseña
         composable("forgot_password") {
             val viewModel = remember {
                 val repository = ForgotPasswordRepositoryImpl()
@@ -98,9 +94,7 @@ fun AppNavigation() {
 
             ForgotPasswordRoute(
                 viewModel = viewModel,
-                onNavigateToLogin = {
-                    navController.popBackStack()
-                },
+                onNavigateToLogin = { navController.popBackStack() },
                 onPasswordUpdated = {
                     navController.navigate("login") {
                         popUpTo("forgot_password") { inclusive = true }
@@ -108,6 +102,8 @@ fun AppNavigation() {
                 }
             )
         }
+
+        // --- FLUJO DE TRABAJOS (CU-15 INTEGRADO) ---
 
         composable(
             route = "job_detail/{jobId}",
@@ -122,10 +118,39 @@ fun AppNavigation() {
                 JobDetailViewModel(repository, useCase)
             }
 
-            JobDetailScreen(jobId = jobId, viewModel = detailViewModel, onNavigateBack = { navController.popBackStack() })
+            JobDetailScreen(
+                jobId = jobId,
+                viewModel = detailViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                navegarAplicantes = { id ->
+                    navController.navigate("applicants/$id")
+                }
+            )
         }
 
-        // Aquí se inyectan las rutas de navegación al HomeScreen
+        // CU-15: PANTALLA DE POSTULANTES (Ajustada al paquete detail)
+        composable(
+            route = "applicants/{jobId}",
+            arguments = listOf(navArgument("jobId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
+            val contextoApplicants = LocalContext.current
+
+            val applicantsViewModel = remember {
+                val repository = JobRepositoryImpl(contextoApplicants)
+                val useCase = GetApplicantsUseCase(repository)
+                JobApplicantsViewModel(useCase)
+            }
+
+            // Recuperamos el título del trabajo del backstack si es necesario o usamos uno genérico
+            JobApplicantsScreen(
+                jobId = jobId,
+                jobTitle = "Lista de Postulantes",
+                viewModel = applicantsViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable("home") {
             val contextoHome = LocalContext.current
             val homeViewModel = remember {
@@ -134,19 +159,12 @@ fun AppNavigation() {
 
             com.example.tasky.ui.HomeScreen(
                 viewModel = homeViewModel,
-                onNavigateToCreateJob = {
-                    navController.navigate("create_job")
-                },
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
-                onJobClick = { jobId ->
-                    navController.navigate("job_detail/$jobId")
-                }
+                onNavigateToCreateJob = { navController.navigate("create_job") },
+                onNavigateToProfile = { navController.navigate("profile") },
+                onJobClick = { jobId -> navController.navigate("job_detail/$jobId") }
             )
         }
 
-        // RUTA CREAR TRABAJO
         composable("create_job") {
             val contexto = LocalContext.current
             val createViewModel = remember {
@@ -159,9 +177,7 @@ fun AppNavigation() {
                 onJobCreated = { imageUri, location, title, category, payment, description, date, time ->
                     createViewModel.publicarChamba(
                         imageUri, location, title, category, payment, description, date, time,
-                        onSuccess = {
-                            navController.popBackStack()
-                        }
+                        onSuccess = { navController.popBackStack() }
                     )
                 }
             )

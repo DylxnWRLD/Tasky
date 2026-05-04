@@ -3,14 +3,17 @@ package com.example.tasky.data.repository
 import android.content.Context
 import android.net.Uri
 import com.example.tasky.data.remote.SupabaseClient
+import com.example.tasky.data.remote.dto.ApplicationDto
 import com.example.tasky.data.remote.dto.JobDto
 import com.example.tasky.data.remote.dto.JobInsertDto
 import com.example.tasky.data.remote.dto.toDomain
 import com.example.tasky.domain.model.Job
+import com.example.tasky.domain.model.User
 import com.example.tasky.domain.repository.JobRepository
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,6 +21,26 @@ import kotlinx.coroutines.withContext
 class JobRepositoryImpl(private val context: Context) : JobRepository {
 
     private val client = SupabaseClient.client
+
+    // --- CUMPLIMIENTO CU-15 ---
+    override suspend fun getApplicantsByJobId(jobId: String): Result<List<User>> = withContext(Dispatchers.IO) {
+        try {
+            // Importa: io.github.jan.supabase.postgrest.query.Columns
+            val response = client.postgrest.from("postulaciones")
+                .select(Columns.raw("*, users(*)")) {
+                    filter { eq("job_id", jobId) }
+                }.decodeList<ApplicationDto>()
+
+            // Mapeamos los resultados usando el toDomain que ya corregimos
+            val users = response.map { it.users.toDomain() }
+
+            Result.success(users)
+        } catch (e: Exception) {
+            // Ex-01: Fallo de consulta por comunicación
+            Result.failure(e)
+        }
+    }
+
 
     override suspend fun applyToJob(jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
