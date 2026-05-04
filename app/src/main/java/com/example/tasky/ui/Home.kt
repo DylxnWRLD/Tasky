@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -39,9 +40,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,6 +57,7 @@ fun HomeScreen(
 ) {
     val jobs = viewModel.jobs
     val isLoading = viewModel.isLoading
+    val selectedCategory = viewModel.selectedCategory
 
     Scaffold(
         bottomBar = {
@@ -78,7 +83,6 @@ fun HomeScreen(
             }
         }
     ) { paddingValues ->
-        // Fondo azulito para igualar el login
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -87,7 +91,6 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // Texto de bienvenida en la parte azul
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -106,7 +109,6 @@ fun HomeScreen(
                     )
                 }
 
-                // Tarjeta blanca con los bordes superiores redondeados a 40.dp
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
@@ -134,12 +136,12 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        val categorias = listOf("Jardinería", "Hogar", "Mecánica", "Carpintería")
+                        val categorias = listOf("Todas", "Jardinería", "Limpieza", "Carpintería", "Plomería", "Mecánica", "Electricidad", "Hogar")
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(categorias) { categoria ->
                                 FilterChip(
-                                    selected = false,
-                                    onClick = { },
+                                    selected = categoria == selectedCategory,
+                                    onClick = { viewModel.setCategory(categoria) },
                                     label = { Text(categoria) }
                                 )
                             }
@@ -161,7 +163,8 @@ fun HomeScreen(
                                         title = job.title,
                                         description = job.description ?: "Sin descripción",
                                         payment = "${job.payment} MXN",
-                                        timeAgo = "Reciente",
+                                        Categoria = job.category,
+                                        imageUrl = job.imageUrl,
                                         onClick = { onJobClick(job.id ?: "") }
                                     )
                                 }
@@ -174,15 +177,14 @@ fun HomeScreen(
     }
 }
 
-
-// Las tarjetas de usuario
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JobCard(
     title: String,
     description: String,
     payment: String,
-    timeAgo: String,
+    Categoria: String,
+    imageUrl: String?,
     onClick: () -> Unit
 ) {
     Card(
@@ -192,12 +194,26 @@ fun JobCard(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(modifier = Modifier.padding(16.dp)) {
-            // Cuadro para la imagen o icono del trabajo
-            Surface(
-                modifier = Modifier.size(64.dp),
-                color = Color(0xFFE0E0E0),
-                shape = RoundedCornerShape(12.dp)
-            ) { }
+
+            // Lógica de validación visual de la imagen CORREGIDA
+            if (!imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Foto de la chamba",
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(64.dp),
+                    color = Color(0xFFE0E0E0),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(Icons.Default.Image, contentDescription = null, tint = Color.Gray, modifier = Modifier.padding(16.dp))
+                }
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -210,7 +226,7 @@ fun JobCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Pago: $payment", style = MaterialTheme.typography.labelLarge, color = Color(0xFF7B8EDB))
-                    Text("Hace: $timeAgo", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text("Categoria: $Categoria", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                 }
             }
         }

@@ -125,13 +125,13 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
 
     override suspend fun uploadJobImage(uri: Uri): Result<String> {
         return try {
-            val fileName = "job_${System.currentTimeMillis()}.jpg"
+            val fileName = "chamba_${System.currentTimeMillis()}.jpg"
             // Se necesitan los bytes de la imagen. Aquí un ejemplo rápido:
             val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
                 ?: throw Exception("No se pudo leer la imagen")
 
-            val path = SupabaseClient.client.storage.from("Detalles Trabajo").upload(fileName, bytes)
-            val publicUrl = SupabaseClient.client.storage.from("Detalles Trabajo").publicUrl(fileName)
+            val path = SupabaseClient.client.storage.from("imagenes-trabajo").upload(fileName, bytes)
+            val publicUrl = SupabaseClient.client.storage.from("imagenes-trabajo").publicUrl(fileName)
             Result.success(publicUrl)
         } catch (e: Exception) {
             Result.failure(e)

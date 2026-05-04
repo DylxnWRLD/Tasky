@@ -205,6 +205,7 @@ fun CreateJobScreen(
                                 value = date,
                                 onValueChange = { date = it; dateTimeError = false },
                                 label = { Text("Fecha") },
+                                placeholder = { Text("YYYY-MM-DD") }, // <-- Texto de guía
                                 isError = dateTimeError,
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(16.dp)
@@ -213,13 +214,14 @@ fun CreateJobScreen(
                                 value = time,
                                 onValueChange = { time = it; dateTimeError = false },
                                 label = { Text("Hora") },
+                                placeholder = { Text("HH:MM") }, // <-- Texto de guía
                                 isError = dateTimeError,
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(16.dp)
                             )
                         }
                         if (dateTimeError) {
-                            Text("Falta la fecha o la hora", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                            Text("Usa YYYY-MM-DD y HH:MM", color = Color.Red, style = MaterialTheme.typography.bodySmall)
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -235,7 +237,12 @@ fun CreateJobScreen(
                             titleError = title.trim().isEmpty()
                             paymentError = pagoValidado == null || pagoValidado <= 0.0
                             descError = description.trim().isEmpty()
-                            dateTimeError = date.trim().isEmpty() || time.trim().isEmpty()
+
+                            // Validación perrona con Expresiones Regulares
+                            val dateRegex = "^\\d{4}-\\d{2}-\\d{2}\$".toRegex()
+                            val timeRegex = "^\\d{2}:\\d{2}(:\\d{2})?\$".toRegex() // Acepta HH:MM y también HH:MM:SS por si acaso
+
+                            dateTimeError = !date.trim().matches(dateRegex) || !time.trim().matches(timeRegex)
 
                             // Si todo está al cien, se lanza el evento
                             if (!titleError && !paymentError && !descError && !dateTimeError) {
