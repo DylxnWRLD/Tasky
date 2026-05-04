@@ -22,7 +22,8 @@ fun LoginScreen(
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onLogin: () -> Unit,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit
 ) {
 
     Box(
@@ -113,6 +114,16 @@ fun LoginScreen(
                         Text("¿No tienes cuenta? Regístrate")
                     }
 
+                    TextButton(
+                        onClick = onNavigateToForgotPassword,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "¿Olvidaste tu contraseña?",
+                            color = Color(0xFF7B8EDB)
+                        )
+                    }
+
                     if (state.isLoading) {
                         CircularProgressIndicator()
                     }
@@ -127,7 +138,11 @@ fun LoginScreen(
 }
 
 @Composable
-fun LoginRoute(viewModel: LoginViewModel, onNavigateToRegister: () -> Unit ) {
+fun LoginRoute(
+    viewModel: LoginViewModel,
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit
+) {
 
     val state = viewModel.state
 
@@ -136,7 +151,8 @@ fun LoginRoute(viewModel: LoginViewModel, onNavigateToRegister: () -> Unit ) {
         onEmailChange = viewModel::onEmailChange,
         onPasswordChange = viewModel::onPasswordChange,
         onLogin = viewModel::login,
-        onNavigateToRegister = onNavigateToRegister
+        onNavigateToRegister = onNavigateToRegister,
+        onNavigateToForgotPassword = onNavigateToForgotPassword
     )
 }
 
@@ -153,6 +169,7 @@ fun LoginPreview() {
         onEmailChange = {},
         onPasswordChange = {},
         onLogin = {},
-        onNavigateToRegister = {}
+        onNavigateToRegister = {},
+        onNavigateToForgotPassword = {}
     )
 }

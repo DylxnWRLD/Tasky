@@ -3,7 +3,6 @@ package com.example.tasky.ui.navigation
 import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
@@ -11,9 +10,15 @@ import com.example.tasky.ui.auth.LoginRoute
 import com.example.tasky.ui.auth.LoginViewModel
 import com.example.tasky.ui.auth.RegisterRoute
 import com.example.tasky.ui.auth.RegisterViewModel
+import com.example.tasky.ui.auth.ForgotPasswordRoute
+import com.example.tasky.ui.auth.ForgotPasswordViewModel
 import com.example.tasky.domain.usecase.LoginUseCase
 import com.example.tasky.domain.usecase.RegisterUseCase
+import com.example.tasky.domain.usecase.ResetPasswordUseCase
+import com.example.tasky.domain.usecase.VerifyOtpUseCase
+import com.example.tasky.domain.usecase.UpdatePasswordUseCase
 import com.example.tasky.data.repository.AuthRepositoryImpl
+import com.example.tasky.data.repository.ForgotPasswordRepositoryImpl
 import com.example.tasky.ui.jobs.detail.JobDetailScreen
 import com.example.tasky.ui.jobs.detail.JobDetailViewModel
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
@@ -22,6 +27,8 @@ import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
 import com.example.tasky.ui.create.CreateJobViewModel
 import org.osmdroid.util.GeoPoint
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun AppNavigation() {
@@ -52,6 +59,9 @@ fun AppNavigation() {
                 viewModel = viewModel,
                 onNavigateToRegister = {
                     navController.navigate("register")
+                },
+                onNavigateToForgotPassword = {
+                    navController.navigate("forgot_password")
                 }
             )
         }
@@ -71,6 +81,29 @@ fun AppNavigation() {
                 onRegisterSuccess = {
                     navController.navigate("login") {
                         popUpTo("register") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // Recuperación de contraseña
+        composable("forgot_password") {
+            val viewModel = remember {
+                val repository = ForgotPasswordRepositoryImpl()
+                val resetUseCase = ResetPasswordUseCase(repository)
+                val verifyUseCase = VerifyOtpUseCase(repository)
+                val updateUseCase = UpdatePasswordUseCase(repository)
+                ForgotPasswordViewModel(resetUseCase, verifyUseCase, updateUseCase)
+            }
+
+            ForgotPasswordRoute(
+                viewModel = viewModel,
+                onNavigateToLogin = {
+                    navController.popBackStack()
+                },
+                onPasswordUpdated = {
+                    navController.navigate("login") {
+                        popUpTo("forgot_password") { inclusive = true }
                     }
                 }
             )
@@ -99,7 +132,6 @@ fun AppNavigation() {
                 HomeViewModel(JobRepositoryImpl(contextoHome))
             }
 
-            // Asegurar que el import apunte a com.example.tasky.ui.HomeScreen
             com.example.tasky.ui.HomeScreen(
                 viewModel = homeViewModel,
                 onNavigateToCreateJob = {
