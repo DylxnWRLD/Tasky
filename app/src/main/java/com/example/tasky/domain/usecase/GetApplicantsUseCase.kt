@@ -5,6 +5,6 @@ import com.example.tasky.domain.repository.JobRepository
 
 class GetApplicantsUseCase(private val repository: JobRepository) {
     suspend operator fun invoke(jobId: String): Result<List<User>> {
-        return repository.getApplicantsByJobId(jobId)
+        return repository.getApplicants(jobId)
     }
 }

@@ -4,7 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items // Importación necesaria para el LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -38,7 +38,6 @@ fun JobApplicantsScreen(
 
     Scaffold(
         topBar = {
-            // Header basado en image_c6b4bc.png
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -66,14 +65,12 @@ fun JobApplicantsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFCED4F5)) // Fondo lila suave
+                .background(Color(0xFFCED4F5))
                 .padding(20.dp)
         ) {
-            // Información del trabajo actual
             Text(text = jobTitle, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.Black)
 
             when {
-                // EX-01: Fallo de consulta
                 state.isLoading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color(0xFF7B8EDB))
@@ -88,7 +85,6 @@ fun JobApplicantsScreen(
                     )
                 }
 
-                // FA-01: Sin postulantes
                 state.applicants.isEmpty() -> {
                     Spacer(Modifier.height(10.dp))
                     Text(
@@ -98,7 +94,6 @@ fun JobApplicantsScreen(
                     )
                 }
 
-                // FLUJO NORMAL: Mostrar lista
                 else -> {
                     Text(
                         text = "${state.applicants.size} postulantes para este trabajo",
@@ -111,7 +106,6 @@ fun JobApplicantsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Corregido: items(lista) { item -> ... }
                         items(state.applicants) { user ->
                             ApplicantCard(user)
                         }
@@ -127,8 +121,8 @@ fun ApplicantCard(user: User) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFFD9D9D9), // Color gris de la tarjeta
-        border = BorderStroke(2.dp, Color(0xFF7B8EDB)) // Borde azul resaltado
+        color = Color(0xFFD9D9D9),
+        border = BorderStroke(2.dp, Color(0xFF7B8EDB))
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -158,7 +152,6 @@ fun ApplicantCard(user: User) {
                     color = Color.Black
                 )
 
-                // Estrellas basadas en el rating (image_c6b4bc.png)
                 Row {
                     repeat(5) { index ->
                         Text(

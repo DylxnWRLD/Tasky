@@ -1,6 +1,5 @@
 package com.example.tasky.ui.navigation
 
-import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.navigation.NavType
@@ -29,8 +28,6 @@ import com.example.tasky.data.repository.JobRepositoryImpl
 import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
 import com.example.tasky.ui.create.CreateJobViewModel
-import org.osmdroid.util.GeoPoint
-import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 
 @Composable
@@ -103,7 +100,7 @@ fun AppNavigation() {
             )
         }
 
-        // --- FLUJO DE TRABAJOS (CU-15 INTEGRADO) ---
+        // --- FLUJO DE TRABAJOS ---
 
         composable(
             route = "job_detail/{jobId}",
@@ -122,13 +119,12 @@ fun AppNavigation() {
                 jobId = jobId,
                 viewModel = detailViewModel,
                 onNavigateBack = { navController.popBackStack() },
-                navegarAplicantes = { id ->
+                goToApplicants = { id ->
                     navController.navigate("applicants/$id")
                 }
             )
         }
 
-        // CU-15: PANTALLA DE POSTULANTES (Ajustada al paquete detail)
         composable(
             route = "applicants/{jobId}",
             arguments = listOf(navArgument("jobId") { type = NavType.StringType })
@@ -142,7 +138,6 @@ fun AppNavigation() {
                 JobApplicantsViewModel(useCase)
             }
 
-            // Recuperamos el título del trabajo del backstack si es necesario o usamos uno genérico
             JobApplicantsScreen(
                 jobId = jobId,
                 jobTitle = "Lista de Postulantes",

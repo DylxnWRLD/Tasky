@@ -2,6 +2,7 @@ package com.example.tasky.ui.jobs.detail
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -27,7 +29,7 @@ fun JobDetailScreen(
     jobId: String,
     viewModel: JobDetailViewModel,
     onNavigateBack: () -> Unit,
-    navegarAplicantes: (String) -> Unit
+    goToApplicants: (String) -> Unit
 ) {
     val state = viewModel.state
 
@@ -47,21 +49,22 @@ fun JobDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 40.dp, start = 16.dp, end = 24.dp, bottom = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(top = 60.dp, start = 16.dp, end = 24.dp, bottom = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White)
                     }
                     Text(
-                        text = if (state.isOwner) "Detalles de mi Tarea" else "Detalles del Trabajo",
+                        modifier = Modifier.padding(start = 50.dp),
+                        text = if (state.isOwner) "Detalles de mi trabajo" else "Detalles del trabajo",
                         style = MaterialTheme.typography.headlineSmall,
                         color = Color.White,
                         fontWeight = FontWeight.Bold
                     )
                 }
 
-                // --- CUERPO PRINCIPAL (TARJETA BLANCA) ---
+                // --- CUERPO PRINCIPAL ---
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
@@ -73,7 +76,7 @@ fun JobDetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // Resumen superior (Imagen + Título + Pago)
+                        // Resumen superior
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 modifier = Modifier.size(80.dp),
@@ -129,9 +132,9 @@ fun JobDetailScreen(
                                     )
                                     Spacer(Modifier.width(12.dp))
                                     Text(
-                                        "Ubicación exacta",
+                                        "Ubicación",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
+                                        fontSize = 16.sp,
                                         color = Color.Black
                                     )
                                 }
@@ -204,7 +207,7 @@ fun JobDetailScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // --- BOTONES DE ACCIÓN (ACTUALIZADO PARA CU-15) ---
+                        // --- BOTONES DE ACCIÓN ---
                         if (state.isOwner) {
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
@@ -212,7 +215,7 @@ fun JobDetailScreen(
                             ) {
                                 // BOTÓN DE VER POSTULANTES
                                 Button(
-                                    onClick = { navegarAplicantes(jobId) },
+                                    onClick = { goToApplicants(jobId) },
                                     modifier = Modifier.fillMaxWidth().height(56.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB)),
                                     shape = RoundedCornerShape(16.dp)

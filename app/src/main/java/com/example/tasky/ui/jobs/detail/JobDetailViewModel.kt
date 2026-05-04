@@ -59,19 +59,10 @@ class JobDetailViewModel(
 
         return try {
             val raw = "${job.date} ${job.time}"
-            println("TASKY_LOG: RAW -> $raw")
-
             val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
             val jobDate = sdf.parse(raw) ?: return CancelResult.ALREADY_STARTED
-
             val now = Date()
-
-            println("TASKY_LOG: Job -> $jobDate")
-            println("TASKY_LOG: Now -> $now")
-
             val diffInMinutes = (jobDate.time - now.time) / (1000.0 * 60)
-
-            println("TASKY_LOG: Diff -> $diffInMinutes")
 
             when {
                 diffInMinutes <= 0 -> CancelResult.ALREADY_STARTED

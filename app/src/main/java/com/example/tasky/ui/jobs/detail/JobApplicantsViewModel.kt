@@ -18,11 +18,9 @@ class JobApplicantsViewModel(
 
             getApplicantsUseCase(jobId).fold(
                 onSuccess = { list ->
-                    // Flujo Normal y FA-01: Si la lista está vacía, se maneja en la UI
                     state = state.copy(applicants = list, isLoading = false)
                 },
                 onFailure = { error ->
-                    // Ex-01: Fallo de consulta
                     state = state.copy(
                         errorMessage = "Error al cargar los postulantes",
                         isLoading = false

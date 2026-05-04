@@ -22,21 +22,18 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
 
     private val client = SupabaseClient.client
 
-    // --- CUMPLIMIENTO CU-15 ---
-    override suspend fun getApplicantsByJobId(jobId: String): Result<List<User>> = withContext(Dispatchers.IO) {
+    // ---
+    override suspend fun getApplicants(jobId: String): Result<List<User>> = withContext(Dispatchers.IO) {
         try {
-            // Importa: io.github.jan.supabase.postgrest.query.Columns
             val response = client.postgrest.from("postulaciones")
                 .select(Columns.raw("*, users(*)")) {
                     filter { eq("job_id", jobId) }
                 }.decodeList<ApplicationDto>()
 
-            // Mapeamos los resultados usando el toDomain que ya corregimos
             val users = response.map { it.users.toDomain() }
 
             Result.success(users)
         } catch (e: Exception) {
-            // Ex-01: Fallo de consulta por comunicación
             Result.failure(e)
         }
     }
