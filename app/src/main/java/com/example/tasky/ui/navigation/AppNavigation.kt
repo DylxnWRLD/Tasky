@@ -1,5 +1,6 @@
 package com.example.tasky.ui.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.navigation.NavType
@@ -33,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     NavHost(
         navController = navController,
@@ -49,6 +51,12 @@ fun AppNavigation() {
             val state = viewModel.state
             LaunchedEffect(state.user) {
                 if (state.user != null) {
+                    Toast.makeText(
+                        context,
+                        "¡Bienvenido ${state.user?.name}!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -73,6 +81,12 @@ fun AppNavigation() {
                 viewModel = viewModel,
                 onNavigateToLogin = { navController.popBackStack() },
                 onRegisterSuccess = {
+                    Toast.makeText(
+                        context,
+                        "¡Registro exitoso! Ahora puedes iniciar sesión",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
                     navController.navigate("login") {
                         popUpTo("register") { inclusive = true }
                     }
@@ -93,6 +107,11 @@ fun AppNavigation() {
                 viewModel = viewModel,
                 onNavigateToLogin = { navController.popBackStack() },
                 onPasswordUpdated = {
+                    Toast.makeText(
+                        context,
+                        "Contraseña cambiada correctamente",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     navController.navigate("login") {
                         popUpTo("forgot_password") { inclusive = true }
                     }
