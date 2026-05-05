@@ -14,4 +14,6 @@ interface AuthRepository {
         email: String,
         password: String
     ): Result<User>
+
+    suspend fun findEmailByUsername(username: String): Result<String>
 }

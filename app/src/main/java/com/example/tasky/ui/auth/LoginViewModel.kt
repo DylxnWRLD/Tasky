@@ -26,7 +26,11 @@ class LoginViewModel(
     fun login() {
         viewModelScope.launch {
             state = state.copy(isLoading = true, error = null)
-            val result = loginUseCase(state.email, state.password)
+
+            val result = loginUseCase(
+                loginIdentifier = state.email,  // Puede ser email o username
+                password = state.password
+            )
 
             state = if (result.isSuccess) {
                 state.copy(
@@ -36,7 +40,7 @@ class LoginViewModel(
             } else {
                 state.copy(
                     isLoading = false,
-                    error = result.exceptionOrNull()?.message
+                    error = result.exceptionOrNull()?.message ?: "Error al iniciar sesión"
                 )
             }
         }
