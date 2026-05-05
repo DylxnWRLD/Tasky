@@ -28,7 +28,8 @@ fun JobApplicantsScreen(
     jobId: String,
     jobTitle: String,
     viewModel: JobApplicantsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onApplicantClick: (String) -> Unit
 ) {
     val state = viewModel.state
 
@@ -41,22 +42,23 @@ fun JobApplicantsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF9BA9FF)) // Color azul claro del encabezado
+                    .background(Color(0xFF9BA9FF))
                     .padding(top = 40.dp, start = 16.dp, bottom = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = onNavigateBack,
-                    modifier = Modifier.background(Color.White, CircleShape).size(36.dp)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.Black)
-                }
+                    Icon(
+                        Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White,
+                    )                }
                 Spacer(Modifier.width(16.dp))
                 Text(
                     "Postulantes:",
+                    modifier = Modifier.padding(start = 20.dp),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = Color.White
                 )
             }
         }
@@ -107,7 +109,13 @@ fun JobApplicantsScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(state.applicants) { user ->
-                            ApplicantCard(user)
+                            Surface(
+                                onClick = { onApplicantClick(user.id) },
+                                color = Color.Transparent,
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                ApplicantCard(user)
+                            }
                         }
                     }
                 }
@@ -128,7 +136,6 @@ fun ApplicantCard(user: User) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Imagen circular con borde
             Surface(
                 modifier = Modifier.size(70.dp),
                 shape = CircleShape,

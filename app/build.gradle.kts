@@ -89,6 +89,7 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.18")
 
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.material3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

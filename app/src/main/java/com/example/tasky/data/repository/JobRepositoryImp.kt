@@ -6,6 +6,7 @@ import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.data.remote.dto.ApplicationDto
 import com.example.tasky.data.remote.dto.JobDto
 import com.example.tasky.data.remote.dto.JobInsertDto
+import com.example.tasky.data.remote.dto.UserDto
 import com.example.tasky.data.remote.dto.toDomain
 import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.model.User
@@ -17,6 +18,7 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 
 class JobRepositoryImpl(private val context: Context) : JobRepository {
 
@@ -38,6 +40,42 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
         }
     }
 
+    override suspend fun getWorkerProfile(
+        workerId: String,
+        jobId: String
+    ): Result<User> = withContext(Dispatchers.IO) {
+
+        try {
+
+            val postulacion = client.postgrest.from("postulaciones")
+                .select {
+                    filter {
+                        eq("worker_id", workerId)
+                        eq("job_id", jobId)
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            if (postulacion.isEmpty()) {
+                return@withContext Result.failure(
+                    Exception("cancelada")
+                )
+            }
+
+            val userDto = client.postgrest.from("users")
+                .select {
+                    filter {
+                        eq("id", workerId)
+                    }
+                }
+                .decodeSingle<UserDto>()
+
+            Result.success(userDto.toDomain())
+
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 
     override suspend fun applyToJob(jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {

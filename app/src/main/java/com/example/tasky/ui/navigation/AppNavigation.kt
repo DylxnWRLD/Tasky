@@ -30,6 +30,8 @@ import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
 import com.example.tasky.ui.create.CreateJobViewModel
 import androidx.compose.ui.platform.LocalContext
+import com.example.tasky.ui.jobs.detail.WorkerProfileScreen
+import com.example.tasky.ui.jobs.detail.WorkerProfileViewModel
 
 @Composable
 fun AppNavigation() {
@@ -144,6 +146,7 @@ fun AppNavigation() {
             )
         }
 
+        // Lista de postulantes
         composable(
             route = "applicants/{jobId}",
             arguments = listOf(navArgument("jobId") { type = NavType.StringType })
@@ -161,9 +164,39 @@ fun AppNavigation() {
                 jobId = jobId,
                 jobTitle = "Lista de Postulantes",
                 viewModel = applicantsViewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onApplicantClick = { workerId ->
+                    navController.navigate("worker_profile/$workerId/$jobId")
+                }
+            )
+        }
+
+        // Detalles del trabajador seleccionado
+        composable(
+            route = "worker_profile/{workerId}/{jobId}",
+            arguments = listOf(
+                navArgument("workerId") { type = NavType.StringType },
+                navArgument("jobId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val workerId = backStackEntry.arguments?.getString("workerId") ?: ""
+            val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
+            val contexto = LocalContext.current
+
+            val profileViewModel = remember {
+                val repository = JobRepositoryImpl(contexto)
+                val useCase = com.example.tasky.domain.usecase.GetWorkerProfileUseCase(repository)
+                WorkerProfileViewModel(useCase)
+            }
+
+            WorkerProfileScreen(
+                workerId = workerId,
+                jobId = jobId,
+                viewModel = profileViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
+
 
         composable("home") {
             val contextoHome = LocalContext.current

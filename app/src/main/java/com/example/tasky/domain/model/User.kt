@@ -22,5 +22,7 @@ data class User(
     val skills: List<String>? = null,
 
     val description: String? = null,
+
+    @SerialName("rating")
     val rating: Double = 0.0
 )

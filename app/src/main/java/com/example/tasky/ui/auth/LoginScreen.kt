@@ -66,6 +66,7 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
+                    Spacer(Modifier.height(60.dp))
                     Text(
                         text = "¡Bienvenido a Tasky!",
                         fontWeight = FontWeight.Bold
@@ -127,7 +128,14 @@ fun LoginScreen(
                     }
 
                     if (state.isLoading) {
-                        CircularProgressIndicator()
+
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+
+                            CircularProgressIndicator()
+                        }
                     }
 
                     state.error?.let {
