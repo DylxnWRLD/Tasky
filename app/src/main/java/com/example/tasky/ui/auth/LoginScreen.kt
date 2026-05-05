@@ -81,7 +81,8 @@ fun LoginScreen(
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
                             capitalization = KeyboardCapitalization.None
-                        )
+                        ),
+                        placeholder = { Text("Email o nombre de usuario") }
                     )
 
                     Text("Contraseña")
@@ -95,7 +96,8 @@ fun LoginScreen(
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             capitalization = KeyboardCapitalization.None
-                        )
+                        ),
+                        placeholder = { Text("*********") }
                     )
 
                     Button(
