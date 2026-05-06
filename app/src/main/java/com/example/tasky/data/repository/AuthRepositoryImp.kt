@@ -140,4 +140,23 @@ class AuthRepositoryImpl : AuthRepository {
             Result.failure(e)
         }
     }
+
+    override suspend fun getCurrentUser(): Result<User> {
+        return try {
+            val userId = supabase.auth.currentUserOrNull()?.id
+                ?: return Result.failure(Exception("No hay sesión activa"))
+
+            val user = supabase
+                .from("users")
+                .select {
+                    filter { eq("id", userId) }
+                }
+                .decodeSingle<User>()
+
+            Result.success(user)
+        } catch (e: Exception) {
+            println("DEBUG_TASKY: Error obteniendo usuario actual -> ${e.localizedMessage}")
+            Result.failure(e)
+        }
+    }
 }

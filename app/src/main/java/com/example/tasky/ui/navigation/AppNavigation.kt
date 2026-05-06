@@ -32,6 +32,9 @@ import com.example.tasky.ui.create.CreateJobViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.example.tasky.ui.jobs.detail.WorkerProfileScreen
 import com.example.tasky.ui.jobs.detail.WorkerProfileViewModel
+import com.example.tasky.ui.profile.UserProfileRoute
+import com.example.tasky.ui.profile.UserProfileViewModel
+import com.example.tasky.domain.usecase.GetUserProfileUseCase
 
 @Composable
 fun AppNavigation() {
@@ -240,12 +243,23 @@ fun AppNavigation() {
         }
 
         composable("profile") {
-            androidx.compose.foundation.layout.Box(
-                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                androidx.compose.material3.Text("Pantalla de perfil en construcción...")
+            val viewModel = remember {
+                val repository = AuthRepositoryImpl()
+                val useCase = GetUserProfileUseCase(repository)
+                UserProfileViewModel(useCase)
             }
+
+            UserProfileRoute(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onEditProfile = {
+                    Toast.makeText(
+                        context,
+                        "Edición de perfil próximamente",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            )
         }
     }
 }
