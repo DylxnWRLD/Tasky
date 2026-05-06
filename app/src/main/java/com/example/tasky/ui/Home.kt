@@ -126,7 +126,7 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(30.dp),
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-                            trailingIcon = { Icon(Icons.Default.FilterList, contentDescription = "Filtros") },
+//                            trailingIcon = { Icon(Icons.Default.FilterList, contentDescription = "Filtros") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,

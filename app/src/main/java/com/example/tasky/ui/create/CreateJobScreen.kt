@@ -1,16 +1,58 @@
 package com.example.tasky.ui.create
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -26,8 +68,9 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
-import com.example.tasky.ui.create.CreateJobViewModel
+import android.view.MotionEvent
 
+@SuppressLint("ClickableViewAccessibility")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateJobScreen(
@@ -58,6 +101,10 @@ fun CreateJobScreen(
     // Estados de Imagen y Mapa
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     var selectedLocation by remember { mutableStateOf(GeoPoint(19.5438, -96.9102)) }
+
+    //Estados para la fecha y hora
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -170,6 +217,21 @@ fun CreateJobScreen(
                                         setMultiTouchControls(true)
                                         controller.setZoom(16.0)
                                         controller.setCenter(selectedLocation)
+
+                                        setOnTouchListener { view, event ->
+                                            when (event.action) {
+                                                MotionEvent.ACTION_DOWN -> {
+                                                    // Cuando tocas el mapa, bloquea el scroll de la pantalla
+                                                    view.parent.requestDisallowInterceptTouchEvent(true)
+                                                }
+                                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                                                    // Cuando sueltas, regresa todo a la normalidad
+                                                    view.parent.requestDisallowInterceptTouchEvent(false)
+                                                }
+                                            }
+                                            false // Se regresa 'false' para que el mapa no pierda el toque y se pueda mover
+                                        }
+
                                         val marker = Marker(this).apply {
                                             position = selectedLocation
                                             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
@@ -201,27 +263,99 @@ fun CreateJobScreen(
 
                         // 7. Fecha y Hora
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(
-                                value = date,
-                                onValueChange = { date = it; dateTimeError = false },
-                                label = { Text("Fecha") },
-                                placeholder = { Text("YYYY-MM-DD") }, // <-- Texto de guía
-                                isError = dateTimeError,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            OutlinedTextField(
-                                value = time,
-                                onValueChange = { time = it; dateTimeError = false },
-                                label = { Text("Hora") },
-                                placeholder = { Text("HH:MM") }, // <-- Texto de guía
-                                isError = dateTimeError,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(16.dp)
-                            )
+                            // Campo de Fecha
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = date,
+                                    onValueChange = {},
+                                    readOnly = true, // Bloquea el teclado
+                                    label = { Text("Fecha") },
+                                    placeholder = { Text("YYYY-MM-DD") },
+                                    isError = dateTimeError,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Calendario") }
+                                )
+                                Spacer(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color.Transparent)
+                                        .clickable { showDatePicker = true }
+                                )
+                            }
+
+                            // Campo de Hora
+                            Box(modifier = Modifier.weight(1f)) {
+                                OutlinedTextField(
+                                    value = time,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Hora") },
+                                    placeholder = { Text("HH:MM") },
+                                    isError = dateTimeError,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = "Reloj") }
+                                )
+                                Spacer(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .background(Color.Transparent)
+                                        .clickable { showTimePicker = true }
+                                )
+                            }
                         }
                         if (dateTimeError) {
-                            Text("Usa YYYY-MM-DD y HH:MM", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                            Text("Falta seleccionar la fecha o la hora", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                        }
+
+                        // 8. Diálogos emergentes (Calendario y Reloj)
+                        if (showDatePicker) {
+                            val datePickerState = rememberDatePickerState()
+                            DatePickerDialog(
+                                onDismissRequest = { showDatePicker = false },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        datePickerState.selectedDateMillis?.let { millis ->
+                                            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                            sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+
+                                            date = sdf.format(java.util.Date(millis))
+                                            dateTimeError = false
+                                        }
+                                        showDatePicker = false
+                                    }) { Text("Aceptar") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
+                                }
+                            ) {
+                                DatePicker(state = datePickerState)
+                            }
+                        }
+
+                        if (showTimePicker) {
+                            val timePickerState = rememberTimePickerState()
+                            AlertDialog(
+                                onDismissRequest = { showTimePicker = false },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        // Formatear la hora con ceros a la izquierda (ej. 09:05 en vez de 9:5)
+                                        val h = timePickerState.hour.toString().padStart(2, '0')
+                                        val m = timePickerState.minute.toString().padStart(2, '0')
+                                        time = "$h:$m"
+                                        dateTimeError = false
+                                        showTimePicker = false
+                                    }) { Text("Aceptar") }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showTimePicker = false }) { Text("Cancelar") }
+                                },
+                                text = {
+                                    // Componente nativo del reloj
+                                    TimePicker(state = timePickerState)
+                                }
+                            )
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -244,7 +378,7 @@ fun CreateJobScreen(
 
                             dateTimeError = !date.trim().matches(dateRegex) || !time.trim().matches(timeRegex)
 
-                            // Si todo está al cien, se lanza el evento
+
                             if (!titleError && !paymentError && !descError && !dateTimeError) {
                                 onJobCreated(imageUri, selectedLocation, title, selectedCategory, pagoValidado!!, description, date, time)
                             }

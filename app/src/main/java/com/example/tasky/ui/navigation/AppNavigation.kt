@@ -224,7 +224,16 @@ fun AppNavigation() {
                 onJobCreated = { imageUri, location, title, category, payment, description, date, time ->
                     createViewModel.publicarChamba(
                         imageUri, location, title, category, payment, description, date, time,
-                        onSuccess = { navController.popBackStack() }
+                        onSuccess = {
+
+                            Toast.makeText(
+                                contexto,
+                                "Tarea Creada",
+                                Toast.LENGTH_SHORT
+                            ).show()
+
+                            navController.popBackStack()
+                        }
                     )
                 }
             )
