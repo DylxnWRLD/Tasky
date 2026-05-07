@@ -243,10 +243,12 @@ fun AppNavigation() {
         }
 
         composable("profile") {
+            val contexto = LocalContext.current
             val viewModel = remember {
-                val repository = AuthRepositoryImpl()
-                val useCase = GetUserProfileUseCase(repository)
-                UserProfileViewModel(useCase)
+                val authRepository = AuthRepositoryImpl() // o el que le pases el contexto, si ya lo pedía
+                val jobRepository = JobRepositoryImpl(contexto) // Inyección del puto repo
+                val useCase = GetUserProfileUseCase(authRepository)
+                UserProfileViewModel(useCase, jobRepository)
             }
 
             UserProfileRoute(
@@ -254,10 +256,14 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfile = {
                     Toast.makeText(
-                        context,
+                        contexto, // Ya jala la variable contexto directamente
                         "Edición de perfil próximamente",
                         Toast.LENGTH_SHORT
                     ).show()
+                },
+                onJobClick = { jobId ->
+                    // Navega derechito a los detalles
+                    navController.navigate("job_detail/$jobId")
                 }
             )
         }

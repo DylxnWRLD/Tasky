@@ -1,6 +1,7 @@
 package com.example.tasky.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -14,20 +15,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.model.User
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserProfileScreen(
     state: UserProfileState,
+    myJobs: List<Job>,
+    isLoadingJobs: Boolean,
     onNavigateBack: () -> Unit,
-    onEditProfile: () -> Unit
+    onEditProfile: () -> Unit,
+    onJobClick: (String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -83,6 +90,9 @@ fun UserProfileScreen(
         } else {
             ProfileContent(
                 user = state.user,
+                myJobs = myJobs,
+                isLoadingJobs = isLoadingJobs,
+                onJobClick = onJobClick,
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -92,6 +102,9 @@ fun UserProfileScreen(
 @Composable
 private fun ProfileContent(
     user: User?,
+    myJobs: List<Job>,
+    isLoadingJobs: Boolean,
+    onJobClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -110,9 +123,89 @@ private fun ProfileContent(
         ProfileInfoSection(user = user)
 
         // Trabajos publicados
-        PublishedJobsSection()
+        PublishedJobsSection(jobs = myJobs, isLoading = isLoadingJobs, onJobClick = onJobClick)
 
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun PublishedJobsSection(
+    jobs: List<Job>,
+    isLoading: Boolean,
+    onJobClick: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 2.dp,
+        color = Color.White
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Work, contentDescription = "Trabajos", tint = Color(0xFF7B8EDB), modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Trabajos Publicados", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
+                }
+                Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFE8EAF6)) {
+                    // Muestra el número real de trabajos
+                    Text(text = "${jobs.size}", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B8EDB))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Lógica perrona para iterar la base de datos
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF7B8EDB))
+                }
+            } else if (jobs.isEmpty()) {
+                Text("Aún no has publicado ni un trabajo.", color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
+            } else {
+                jobs.forEachIndexed { index, job ->
+                    JobItem(
+                        title = job.title,
+                        category = job.category,
+                        date = "Reciente", // O puedes formatear tu job.scheduledDate si lo tienes
+                        status = job.status ?: "Activo",
+                        payment = "$${job.payment}",
+                        onClick = { onJobClick(job.id ?: "") }
+                    )
+
+                    if (index < jobs.size - 1) {
+                        HorizontalDivider(
+                            color = Color(0xFFF0F0F0),
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = { /* Funcionalidad futura */ },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF7B8EDB))
+            ) {
+                Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ver todos los trabajos")
+            }
+        }
     }
 }
 
@@ -122,7 +215,7 @@ private fun ProfileHeader(user: User?) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                brush = Brush.verticalGradient(
                     colors = listOf(
                         Color(0xFF7B8EDB),
                         Color(0xFF9FA8DA)
@@ -353,7 +446,7 @@ private fun SkillsSection(skills: List<String>?) {
                     text = "Sin habilidades especificadas",
                     fontSize = 14.sp,
                     color = Color(0xFF9E9E9E),
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    fontStyle = FontStyle.Italic
                 )
             } else {
                 // Mostrar chips de habilidades
@@ -417,124 +510,10 @@ private fun BioSection(bio: String?) {
                 text = bio ?: "Sin biografía",
                 fontSize = 14.sp,
                 color = if (bio == null) Color(0xFF9E9E9E) else Color(0xFF424242),
-                fontStyle = if (bio == null) androidx.compose.ui.text.font.FontStyle.Italic
-                else androidx.compose.ui.text.font.FontStyle.Normal,
+                fontStyle = if (bio == null) FontStyle.Italic
+                else FontStyle.Normal,
                 lineHeight = 20.sp
             )
-        }
-    }
-}
-
-@Composable
-private fun PublishedJobsSection() {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 2.dp,
-        color = Color.White
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            // Título de la sección
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Work,
-                        contentDescription = "Trabajos",
-                        tint = Color(0xFF7B8EDB),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Trabajos Publicados",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF212121)
-                    )
-                }
-
-                // Contador de trabajos
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFE8EAF6)
-                ) {
-                    Text(
-                        text = "3",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF7B8EDB)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Lista de trabajos de ejemplo (solo visual)
-            JobItem(
-                title = "Reparación de tubería",
-                category = "Plomería",
-                date = "15 May 2024",
-                status = "Activo",
-                payment = "$500"
-            )
-
-            HorizontalDivider(
-                color = Color(0xFFF0F0F0),
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-
-            JobItem(
-                title = "Pintar sala de estar",
-                category = "Pintura",
-                date = "10 May 2024",
-                status = "Completado",
-                payment = "$800"
-            )
-
-            HorizontalDivider(
-                color = Color(0xFFF0F0F0),
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-
-            JobItem(
-                title = "Jardinería general",
-                category = "Jardinería",
-                date = "5 May 2024",
-                status = "En progreso",
-                payment = "$350"
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Botón "Ver todos"
-            OutlinedButton(
-                onClick = { /* Funcionalidad futura */ },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFF7B8EDB)
-                )
-            ) {
-                Icon(
-                    Icons.Default.List,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ver todos los trabajos")
-            }
         }
     }
 }
@@ -545,10 +524,14 @@ private fun JobItem(
     category: String,
     date: String,
     status: String,
-    payment: String
+    payment: String,
+    onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable{ onClick() }
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Icono del trabajo
@@ -650,38 +633,17 @@ private fun JobItem(
 fun UserProfileRoute(
     viewModel: UserProfileViewModel,
     onNavigateBack: () -> Unit,
-    onEditProfile: () -> Unit
+    onEditProfile: () -> Unit,
+    onJobClick: (String) -> Unit // <-- Añadido al route principal
 ) {
     val state = viewModel.state
 
     UserProfileScreen(
         state = state,
+        myJobs = viewModel.myJobs,
+        isLoadingJobs = viewModel.isLoadingJobs,
         onNavigateBack = onNavigateBack,
-        onEditProfile = onEditProfile
+        onEditProfile = onEditProfile,
+        onJobClick = onJobClick
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun UserProfilePreview() {
-    MaterialTheme {
-        UserProfileScreen(
-            state = UserProfileState(
-                user = User(
-                    id = "123",
-                    email = "juan@example.com",
-                    name = "Juan Pérez",
-                    role = "WORKER",
-                    location = "Ciudad de México",
-                    experience = "3 años en desarrollo Android",
-                    skills = listOf("Kotlin", "Jetpack Compose", "Firebase"),
-                    bio = "Desarrollador apasionado por crear apps increíbles"
-                ),
-                isLoading = false,
-                error = null
-            ),
-            onNavigateBack = {},
-            onEditProfile = {}
-        )
-    }
 }

@@ -204,4 +204,18 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
             Result.failure(e)
         }
     }
+
+    override suspend fun getJobsByClientId(clientId: String): Result<List<Job>> {
+        return try {
+            // Filtramos a huevo por la columna client_id
+            val jobsDto = SupabaseClient.client.from("trabajos")
+                .select {
+                    filter { eq("client_id", clientId) }
+                }.decodeList<JobDto>()
+
+            Result.success(jobsDto.map { it.toDomain() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

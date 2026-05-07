@@ -23,5 +23,9 @@ interface JobRepository {
     suspend fun insertJob(job: JobInsertDto): Result<Unit>
 
     suspend fun getApplicants(jobId: String): Result<List<User>>
+
     suspend fun getWorkerProfile(workerId: String, jobId: String): Result<User>
+
+
+    suspend fun getJobsByClientId(clientId: String): Result<List<Job>>
 }
