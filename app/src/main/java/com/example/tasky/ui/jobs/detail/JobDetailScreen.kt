@@ -29,7 +29,9 @@ fun JobDetailScreen(
     jobId: String,
     viewModel: JobDetailViewModel,
     onNavigateBack: () -> Unit,
-    goToApplicants: (String) -> Unit
+    goToApplicants: (String) -> Unit,
+    onEditClick: () -> Unit,
+    onDeleteSuccess: () -> Unit
 ) {
     val state = viewModel.state
 
@@ -228,7 +230,7 @@ fun JobDetailScreen(
                                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
                                     Button(
-                                        onClick = { /* Navegar a editar */ },
+                                        onClick = onEditClick,
                                         modifier = Modifier.weight(1f).height(56.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                                         shape = RoundedCornerShape(16.dp),
@@ -237,7 +239,7 @@ fun JobDetailScreen(
                                         Text("Editar", fontWeight = FontWeight.Bold, color = Color.Black)
                                     }
                                     Button(
-                                        onClick = { /* Borrar */ },
+                                        onClick = { viewModel.eliminarChamba { onDeleteSuccess()} },
                                         modifier = Modifier.weight(1f).height(56.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                                         shape = RoundedCornerShape(16.dp)

@@ -16,6 +16,8 @@ interface JobRepository {
 
     suspend fun getJobById(jobId: String): Result<Job>
 
+    suspend fun updateJob(jobId: String, job: JobInsertDto): Result<Unit>
+
     suspend fun deleteJob(jobId: String): Result<Unit>
 
     suspend fun uploadJobImage(uri: Uri): Result<String>
@@ -26,6 +28,7 @@ interface JobRepository {
 
     suspend fun getWorkerProfile(workerId: String, jobId: String): Result<User>
 
-
     suspend fun getJobsByClientId(clientId: String): Result<List<Job>>
+
+
 }

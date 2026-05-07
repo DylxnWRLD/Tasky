@@ -145,6 +145,35 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 goToApplicants = { id ->
                     navController.navigate("applicants/$id")
+                },
+                onEditClick = {
+                    navController.navigate("edit_job/$jobId") // Brinca a editar
+                },
+                onDeleteSuccess = {
+                    Toast.makeText(contextoDetalle, "Tarea Eliminada", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack() // Saca al wey a la pantalla anterior
+                }
+            )
+        }
+
+        // --- RUTA PARA EDITAR TRABAJO ---
+        composable(
+            route = "edit_job/{jobId}",
+            arguments = listOf(navArgument("jobId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
+            val contexto = LocalContext.current
+
+            val createViewModel = remember { CreateJobViewModel(JobRepositoryImpl(contexto)) }
+
+            CreateJobScreen(
+                viewModel = createViewModel,
+                jobIdToEdit = jobId, // Se le inyecta el ID para que sepa que es edición
+                onNavigateBack = { navController.popBackStack() },
+                onJobSaved = { mensajeToast ->
+                    // Se recicla el Toast tanto para creación como para edición
+                    Toast.makeText(contexto, mensajeToast, Toast.LENGTH_SHORT).show()
+                    navController.popBackStack()
                 }
             )
         }
@@ -223,21 +252,16 @@ fun AppNavigation() {
 
             CreateJobScreen(
                 viewModel = createViewModel,
+                jobIdToEdit = null, // Se indica nulo al tratarse de una creación
                 onNavigateBack = { navController.popBackStack() },
-                onJobCreated = { imageUri, location, title, category, payment, description, date, time ->
-                    createViewModel.publicarChamba(
-                        imageUri, location, title, category, payment, description, date, time,
-                        onSuccess = {
-
-                            Toast.makeText(
-                                contexto,
-                                "Tarea Creada",
-                                Toast.LENGTH_SHORT
-                            ).show()
-
-                            navController.popBackStack()
-                        }
-                    )
+                onJobSaved = { mensaje ->
+                    // Se lanza el madrazo visual y se regresa a la pantalla anterior
+                    Toast.makeText(
+                        contexto,
+                        mensaje,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    navController.popBackStack()
                 }
             )
         }

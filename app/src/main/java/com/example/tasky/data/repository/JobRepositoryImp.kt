@@ -170,6 +170,15 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
         }
     }
 
+    override suspend fun updateJob(jobId: String, job: JobInsertDto): Result<Unit> {
+        return try {
+            SupabaseClient.client.from("trabajos").update(job) {
+                filter { eq("id", jobId) }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
     override suspend fun deleteJob(jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             client.postgrest.from("trabajos").delete {

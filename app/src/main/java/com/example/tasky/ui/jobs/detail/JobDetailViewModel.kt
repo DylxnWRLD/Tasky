@@ -163,6 +163,24 @@ class JobDetailViewModel(
         }
     }
 
+    fun eliminarChamba(onSuccess: () -> Unit) {
+        val jobId = state.job?.id ?: return
+
+        state = state.copy(isActionLoading = true)
+
+        viewModelScope.launch {
+            repository.deleteJob(jobId).onSuccess {
+                state = state.copy(isActionLoading = false)
+                onSuccess() // Manda la señal de éxito a la vista
+            }.onFailure { error ->
+                state = state.copy(
+                    isActionLoading = false,
+                    userMessage = "No se pudo borrar: ${error.message}"
+                )
+            }
+        }
+    }
+
     fun clearUserMessage() {
         state = state.copy(userMessage = null)
     }

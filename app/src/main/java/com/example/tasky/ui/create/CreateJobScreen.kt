@@ -2,21 +2,14 @@ package com.example.tasky.ui.create
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.view.MotionEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,32 +18,8 @@ import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,19 +37,19 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
-import android.view.MotionEvent
 
 @SuppressLint("ClickableViewAccessibility")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateJobScreen(
     viewModel: CreateJobViewModel,
+    jobIdToEdit: String? = null, // <-- ID Opcional para Editar
     onNavigateBack: () -> Unit,
-    onJobCreated: (imageUri: Uri?, location: GeoPoint, title: String, category: String, payment: Double, description: String, date: String, time: String) -> Unit
+    onJobSaved: (String) -> Unit // <-- Recibe el mensaje para el Toast
 ) {
     val context = LocalContext.current
 
-    // Estados de los campos (Esquema de BD)
+    // Estados de los campos
     var title by remember { mutableStateOf("") }
     var payment by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -93,18 +62,48 @@ fun CreateJobScreen(
     var descError by remember { mutableStateOf(false) }
     var dateTimeError by remember { mutableStateOf(false) }
 
-    // Estado para Categoría (Combo Box)
+    // Estado para Categoría
     var expanded by remember { mutableStateOf(false) }
     val categorias = listOf("Jardinería", "Limpieza", "Carpintería", "Plomería", "Mecánica", "Electricidad", "Hogar")
     var selectedCategory by remember { mutableStateOf(categorias[0]) }
 
     // Estados de Imagen y Mapa
     var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageUrlVieja by remember { mutableStateOf<String?>(null) } // Guarda el link si ya tenía foto
     var selectedLocation by remember { mutableStateOf(GeoPoint(19.5438, -96.9102)) }
 
-    //Estados para la fecha y hora
+    // Estados para la fecha y hora
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+
+    // --- EFECTOS PARA CARGAR LOS DATOS ---
+    LaunchedEffect(jobIdToEdit) {
+        if (jobIdToEdit != null) {
+            viewModel.cargarChamba(jobIdToEdit)
+        }
+    }
+
+    LaunchedEffect(viewModel.jobToEdit) {
+        viewModel.jobToEdit?.let { job ->
+            title = job.title
+            payment = job.payment.toString()
+            description = job.description
+            date = job.date
+            time = job.time
+            selectedCategory = job.category
+            imageUrlVieja = job.imageUrl
+
+            // Reconstruir coordenadas del mapa
+            val latLng = job.locationApprox.split(",")
+            if (latLng.size == 2) {
+                latLng[0].toDoubleOrNull()?.let { lat ->
+                    latLng[1].toDoubleOrNull()?.let { lon ->
+                        selectedLocation = GeoPoint(lat, lon)
+                    }
+                }
+            }
+        }
+    }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -113,7 +112,7 @@ fun CreateJobScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF7B8EDB))) {
         Column(modifier = Modifier.fillMaxSize()) {
 
-            // Encabezado estático
+            // Encabezado dinámico
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 40.dp, start = 16.dp, bottom = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -121,7 +120,12 @@ fun CreateJobScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
                 }
-                Text("Publicar Trabajo", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = if (jobIdToEdit != null) "Editar Trabajo" else "Publicar Trabajo",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium
+                )
             }
 
             Surface(
@@ -137,7 +141,7 @@ fun CreateJobScreen(
                     ) {
                         Text("Detalles de la chamba", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
-                        // 1. Imagen (Miniatura)
+                        // 1. Imagen (Prioridad a la nueva, si no la vieja)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -150,6 +154,8 @@ fun CreateJobScreen(
                         ) {
                             if (imageUri != null) {
                                 AsyncImage(model = imageUri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            } else if (imageUrlVieja != null) {
+                                AsyncImage(model = imageUrlVieja, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             } else {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = Color.Gray)
@@ -169,7 +175,7 @@ fun CreateJobScreen(
                             shape = RoundedCornerShape(16.dp)
                         )
 
-                        // 3. Categoría (Combo Box / Dropdown)
+                        // 3. Categoría (Combo Box)
                         ExposedDropdownMenuBox(
                             expanded = expanded,
                             onExpandedChange = { expanded = !expanded }
@@ -220,16 +226,10 @@ fun CreateJobScreen(
 
                                         setOnTouchListener { view, event ->
                                             when (event.action) {
-                                                MotionEvent.ACTION_DOWN -> {
-                                                    // Cuando tocas el mapa, bloquea el scroll de la pantalla
-                                                    view.parent.requestDisallowInterceptTouchEvent(true)
-                                                }
-                                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                                                    // Cuando sueltas, regresa todo a la normalidad
-                                                    view.parent.requestDisallowInterceptTouchEvent(false)
-                                                }
+                                                MotionEvent.ACTION_DOWN -> view.parent.requestDisallowInterceptTouchEvent(true)
+                                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.parent.requestDisallowInterceptTouchEvent(false)
                                             }
-                                            false // Se regresa 'false' para que el mapa no pierda el toque y se pueda mover
+                                            false
                                         }
 
                                         val marker = Marker(this).apply {
@@ -245,6 +245,13 @@ fun CreateJobScreen(
                                             override fun longPressHelper(p: GeoPoint?): Boolean = false
                                         }))
                                     }
+                                },
+                                update = { mapView ->
+                                    // Esto asegura que el mapa se mueva cuando bajemos los datos de Supabase
+                                    mapView.controller.setCenter(selectedLocation)
+                                    val marker = mapView.overlays.filterIsInstance<Marker>().firstOrNull()
+                                    marker?.position = selectedLocation
+                                    mapView.invalidate()
                                 }
                             )
                         }
@@ -263,12 +270,11 @@ fun CreateJobScreen(
 
                         // 7. Fecha y Hora
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Campo de Fecha
                             Box(modifier = Modifier.weight(1f)) {
                                 OutlinedTextField(
                                     value = date,
                                     onValueChange = {},
-                                    readOnly = true, // Bloquea el teclado
+                                    readOnly = true,
                                     label = { Text("Fecha") },
                                     placeholder = { Text("YYYY-MM-DD") },
                                     isError = dateTimeError,
@@ -276,15 +282,9 @@ fun CreateJobScreen(
                                     shape = RoundedCornerShape(16.dp),
                                     trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Calendario") }
                                 )
-                                Spacer(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(Color.Transparent)
-                                        .clickable { showDatePicker = true }
-                                )
+                                Spacer(modifier = Modifier.matchParentSize().background(Color.Transparent).clickable { showDatePicker = true })
                             }
 
-                            // Campo de Hora
                             Box(modifier = Modifier.weight(1f)) {
                                 OutlinedTextField(
                                     value = time,
@@ -297,19 +297,14 @@ fun CreateJobScreen(
                                     shape = RoundedCornerShape(16.dp),
                                     trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = "Reloj") }
                                 )
-                                Spacer(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .background(Color.Transparent)
-                                        .clickable { showTimePicker = true }
-                                )
+                                Spacer(modifier = Modifier.matchParentSize().background(Color.Transparent).clickable { showTimePicker = true })
                             }
                         }
                         if (dateTimeError) {
                             Text("Falta seleccionar la fecha o la hora", color = Color.Red, style = MaterialTheme.typography.bodySmall)
                         }
 
-                        // 8. Diálogos emergentes (Calendario y Reloj)
+                        // Diálogos emergentes
                         if (showDatePicker) {
                             val datePickerState = rememberDatePickerState()
                             DatePickerDialog(
@@ -319,19 +314,14 @@ fun CreateJobScreen(
                                         datePickerState.selectedDateMillis?.let { millis ->
                                             val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
                                             sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
-
                                             date = sdf.format(java.util.Date(millis))
                                             dateTimeError = false
                                         }
                                         showDatePicker = false
                                     }) { Text("Aceptar") }
                                 },
-                                dismissButton = {
-                                    TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") }
-                                }
-                            ) {
-                                DatePicker(state = datePickerState)
-                            }
+                                dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancelar") } }
+                            ) { DatePicker(state = datePickerState) }
                         }
 
                         if (showTimePicker) {
@@ -340,7 +330,6 @@ fun CreateJobScreen(
                                 onDismissRequest = { showTimePicker = false },
                                 confirmButton = {
                                     TextButton(onClick = {
-                                        // Formatear la hora con ceros a la izquierda (ej. 09:05 en vez de 9:5)
                                         val h = timePickerState.hour.toString().padStart(2, '0')
                                         val m = timePickerState.minute.toString().padStart(2, '0')
                                         time = "$h:$m"
@@ -348,55 +337,61 @@ fun CreateJobScreen(
                                         showTimePicker = false
                                     }) { Text("Aceptar") }
                                 },
-                                dismissButton = {
-                                    TextButton(onClick = { showTimePicker = false }) { Text("Cancelar") }
-                                },
-                                text = {
-                                    // Componente nativo del reloj
-                                    TimePicker(state = timePickerState)
-                                }
+                                dismissButton = { TextButton(onClick = { showTimePicker = false }) { Text("Cancelar") } },
+                                text = { TimePicker(state = timePickerState) }
                             )
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    // BOTÓN ESTÁTICO (Fuera del scroll)
+                    // BOTÓN GUARDAR
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = {
-                            // Checar que no vengan vacíos ni con formatos pendejos
                             val pagoValidado = payment.toDoubleOrNull()
-
                             titleError = title.trim().isEmpty()
                             paymentError = pagoValidado == null || pagoValidado <= 0.0
                             descError = description.trim().isEmpty()
 
-                            // Validación perrona con Expresiones Regulares
                             val dateRegex = "^\\d{4}-\\d{2}-\\d{2}\$".toRegex()
-                            val timeRegex = "^\\d{2}:\\d{2}(:\\d{2})?\$".toRegex() // Acepta HH:MM y también HH:MM:SS por si acaso
+                            val timeRegex = "^\\d{2}:\\d{2}(:\\d{2})?\$".toRegex()
 
                             dateTimeError = !date.trim().matches(dateRegex) || !time.trim().matches(timeRegex)
 
-
                             if (!titleError && !paymentError && !descError && !dateTimeError) {
-                                onJobCreated(imageUri, selectedLocation, title, selectedCategory, pagoValidado!!, description, date, time)
+                                // Aquí se le manda la acción final
+                                viewModel.guardarChamba(
+                                    jobId = jobIdToEdit,
+                                    imageUri = imageUri,
+                                    location = selectedLocation,
+                                    title = title,
+                                    category = selectedCategory,
+                                    payment = pagoValidado!!,
+                                    description = description,
+                                    date = date,
+                                    time = time,
+                                    onSuccess = onJobSaved // Pasamos el mensaje directo al padre
+                                )
                             }
                         },
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB))
                     ) {
-                        Text("Publicar ahora", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            text = if (jobIdToEdit != null) "Actualizar chamba" else "Publicar ahora",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
                 }
             }
         }
+
         if (viewModel.isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = Color.White)
@@ -406,14 +401,8 @@ fun CreateJobScreen(
         viewModel.errorMessage?.let { errorMsg ->
             Snackbar(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                action = {
-                    TextButton(onClick = { viewModel.resetState() }) {
-                        Text("OK", color = Color.White)
-                    }
-                }
-            ) {
-                Text(errorMsg)
-            }
+                action = { TextButton(onClick = { viewModel.resetState() }) { Text("OK", color = Color.White) } }
+            ) { Text(errorMsg) }
         }
     }
 }
