@@ -5,7 +5,6 @@ import androidx.lifecycle.*
 import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.repository.JobRepository
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
-import com.example.tasky.data.repository.JobRepositoryImpl
 import com.example.tasky.domain.usecase.CancelApplicationUseCase
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
@@ -15,9 +14,10 @@ import java.util.*
 class JobDetailViewModel(
     private val repository: JobRepository,
     private val applyToJobUseCase: ApplyToJobUseCase,
-    private val cancelApplicationUseCase: CancelApplicationUseCase = CancelApplicationUseCase(repository),
     private val currentUserId: String? = SupabaseClient.client.auth.currentUserOrNull()?.id
 ) : ViewModel() {
+
+    private val cancelApplicationUseCase = CancelApplicationUseCase(repository)
 
     var state by mutableStateOf(JobDetailState())
         private set
@@ -86,17 +86,14 @@ class JobDetailViewModel(
                 state = state.copy(isActionLoading = false)
 
                 when (checkCancelApplication()) {
-
                     CancelResult.CAN_CANCEL -> {
                         state = state.copy(showConfirmDialog = true)
                     }
-
                     CancelResult.LESS_THAN_60_MIN -> {
                         state = state.copy(
                             userMessage = "No puedes cancelar, faltan menos de 60 minutos."
                         )
                     }
-
                     CancelResult.ALREADY_STARTED -> {
                         state = state.copy(
                             userMessage = "Este trabajo ya comenzó o ya pasó."
@@ -183,5 +180,28 @@ class JobDetailViewModel(
 
     fun clearUserMessage() {
         state = state.copy(userMessage = null)
+    }
+
+    fun liberarTrabajo() {
+        val jobId = state.job?.id ?: return
+        val workerId = state.job?.acceptedWorkerId ?: return
+
+        state = state.copy(isActionLoading = true)
+
+        viewModelScope.launch {
+            repository.cancelWorkerSelection(jobId, workerId).onSuccess {
+                fetchJobData(jobId) {
+                    state = state.copy(
+                        isActionLoading = false,
+                        userMessage = "El trabajo ha sido reabierto con éxito."
+                    )
+                }
+            }.onFailure { error ->
+                state = state.copy(
+                    isActionLoading = false,
+                    userMessage = "No se pudo reabrir: ${error.localizedMessage}"
+                )
+            }
+        }
     }
 }

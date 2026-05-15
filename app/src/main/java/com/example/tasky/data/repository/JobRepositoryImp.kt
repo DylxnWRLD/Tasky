@@ -9,6 +9,7 @@ import com.example.tasky.data.remote.dto.JobInsertDto
 import com.example.tasky.data.remote.dto.UserDto
 import com.example.tasky.data.remote.dto.toDomain
 import com.example.tasky.domain.model.Job
+import com.example.tasky.domain.model.JobApplicant
 import com.example.tasky.domain.model.User
 import com.example.tasky.domain.repository.JobRepository
 import io.github.jan.supabase.gotrue.auth
@@ -25,16 +26,29 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
     private val client = SupabaseClient.client
 
     // ---
-    override suspend fun getApplicants(jobId: String): Result<List<User>> = withContext(Dispatchers.IO) {
+    override suspend fun getApplicants(jobId: String): Result<List<JobApplicant>> = withContext(Dispatchers.IO) {
         try {
             val response = client.postgrest.from("postulaciones")
                 .select(Columns.raw("*, users(*)")) {
-                    filter { eq("job_id", jobId) }
+                    filter {
+                        eq("job_id", jobId)
+                        or {
+                            eq("status", "pendiente")
+                            eq("status", "aceptado")
+                        }
+                    }
                 }.decodeList<ApplicationDto>()
 
-            val users = response.map { it.users.toDomain() }
+            val applicants = response.map { dto ->
+                JobApplicant(
+                    user = dto.users.toDomain(),
+                    status = dto.status
+                )
+            }
 
-            Result.success(users)
+            val sortedApplicants = applicants.sortedByDescending { it.status == "aceptado" }
+
+            Result.success(sortedApplicants)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -82,6 +96,18 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
             val userId = client.auth.currentUserOrNull()?.id
                 ?: return@withContext Result.failure(Exception("Usuario no autenticado"))
 
+            val checkAccepted = client.postgrest.from("postulaciones")
+                .select {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("status", "aceptado")
+                    }
+                }.decodeList<ApplicationDto>()
+
+            if (checkAccepted.isNotEmpty()) {
+                return@withContext Result.failure(Exception("Este trabajo ya no acepta más postulaciones."))
+            }
+
             client.postgrest.from("postulaciones").insert(mapOf(
                 "job_id" to jobId,
                 "worker_id" to userId,
@@ -127,9 +153,22 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
             val userId = client.auth.currentUserOrNull()?.id
 
             val jobDto = client.postgrest.from("trabajos")
-                .select {
-                    filter { eq("id", jobId) }
-                }.decodeSingle<JobDto>()
+                .select { filter { eq("id", jobId) } }
+                .decodeSingle<JobDto>()
+
+            val acceptedResponse = client.postgrest.from("postulaciones")
+                .select(io.github.jan.supabase.postgrest.query.Columns.list("id", "status", "worker_id")) {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("status", "aceptado")
+                    }
+                }.decodeList<kotlinx.serialization.json.JsonObject>()
+
+            val isJobClosed = acceptedResponse.isNotEmpty()
+            val acceptedWorkerId = if (isJobClosed) {
+                acceptedResponse.firstOrNull()?.get("worker_id")
+                    ?.toString()?.replace("\"", "")
+            } else null
 
             var isApplied = false
             if (userId != null) {
@@ -141,12 +180,10 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                                 eq("worker_id", userId)
                             }
                         }
-
                     val jsonArray = response.decodeAs<kotlinx.serialization.json.JsonArray>()
                     isApplied = jsonArray.isNotEmpty()
                 } catch (e: Exception) {
                     isApplied = false
-                    println("Error verificando postulación: ${e.message}")
                 }
             }
 
@@ -161,7 +198,10 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                 date = jobDto.date,
                 time = jobDto.time,
                 imageUrl = jobDto.image_url,
-                isApplied = isApplied
+                status = jobDto.status,
+                isApplied = isApplied,
+                isClosed = isJobClosed,
+                acceptedWorkerId = acceptedWorkerId
             )
 
             Result.success(job)
@@ -223,6 +263,36 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                 }.decodeList<JobDto>()
 
             Result.success(jobsDto.map { it.toDomain() })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun acceptApplicant(workerId: String, jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = client.postgrest.from("postulaciones")
+                .update(mapOf("status" to "aceptado")) {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("worker_id", workerId)
+                    }
+                }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun cancelWorkerSelection(jobId: String, workerId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            client.postgrest.from("postulaciones")
+                .update(mapOf("status" to "pendiente")) {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("worker_id", workerId)
+                    }
+                }
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

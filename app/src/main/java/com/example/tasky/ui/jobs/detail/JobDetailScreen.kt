@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
+import com.example.tasky.data.remote.SupabaseClient
+import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.delay
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -47,7 +49,7 @@ fun JobDetailScreen(
         state.job?.let { job ->
             Column(modifier = Modifier.fillMaxSize()) {
 
-                // --- ENCABEZADO ---
+                // --- HEADER ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -66,7 +68,7 @@ fun JobDetailScreen(
                     )
                 }
 
-                // --- CUERPO PRINCIPAL ---
+                // --- CONTENIDO ---
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
@@ -78,7 +80,7 @@ fun JobDetailScreen(
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
                     ) {
-                        // Resumen superior
+                        // Header del trabajo (Imagen, Título y Pago)
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 modifier = Modifier.size(80.dp),
@@ -103,7 +105,7 @@ fun JobDetailScreen(
 
                         Spacer(Modifier.height(24.dp))
 
-                        // 1. TARJETA DE DESCRIPCIÓN
+                        // DESCRIPCIÓN
                         Surface(
                             color = Color.White,
                             shape = RoundedCornerShape(16.dp),
@@ -118,7 +120,7 @@ fun JobDetailScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // 2. SECCIÓN DE UBICACIÓN
+                        // UBICACIÓN
                         Surface(
                             color = Color.White,
                             shape = RoundedCornerShape(16.dp),
@@ -126,19 +128,9 @@ fun JobDetailScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOn,
-                                        contentDescription = null,
-                                        tint = Color(0xFF7B8EDB),
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF7B8EDB), modifier = Modifier.size(24.dp))
                                     Spacer(Modifier.width(12.dp))
-                                    Text(
-                                        "Ubicación",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = Color.Black
-                                    )
+                                    Text("Ubicación", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.Black)
                                 }
 
                                 Spacer(Modifier.height(12.dp))
@@ -148,14 +140,12 @@ fun JobDetailScreen(
                                         val coords = job.locationApprox.split(",")
                                         GeoPoint(coords[0].toDouble(), coords[1].toDouble())
                                     } catch (e: Exception) {
-                                        GeoPoint(19.5438, -96.9102)
+                                        GeoPoint(19.5438, -96.9102) // Coordenadas por defecto
                                     }
                                 }
 
                                 Surface(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp),
+                                    modifier = Modifier.fillMaxWidth().height(180.dp),
                                     shape = RoundedCornerShape(12.dp),
                                     border = BorderStroke(1.dp, Color.LightGray)
                                 ) {
@@ -164,7 +154,7 @@ fun JobDetailScreen(
                                         factory = { ctx ->
                                             MapView(ctx).apply {
                                                 setTileSource(TileSourceFactory.MAPNIK)
-                                                setMultiTouchControls(false)
+                                                setMultiTouchControls(true)
                                                 setBuiltInZoomControls(false)
                                                 controller.setZoom(17.5)
                                                 controller.setCenter(locationPoint)
@@ -186,7 +176,7 @@ fun JobDetailScreen(
 
                         Spacer(Modifier.height(16.dp))
 
-                        // 3. TARJETA DE FECHA Y HORA
+                        // FECHA Y HORA
                         Surface(
                             color = Color.White,
                             shape = RoundedCornerShape(16.dp),
@@ -209,20 +199,60 @@ fun JobDetailScreen(
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // --- BOTONES DE ACCIÓN ---
+                        // BOTONES DE ACCIÓN
+                        val currentUserId = SupabaseClient.client.auth.currentUserOrNull()?.id
+
                         if (state.isOwner) {
+                            // VISTA DEL DUEÑO (OFERTANTE)
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                // BOTÓN DE VER POSTULANTES
-                                Button(
-                                    onClick = { goToApplicants(jobId) },
-                                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB)),
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Text("Ver postulantes", fontWeight = FontWeight.Bold, color = Color.White)
+                                if (job.isClosed) {
+                                    Surface(
+                                        color = Color(0xFFE8F5E9),
+                                        shape = RoundedCornerShape(12.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text("¡Trabajo Asignado!", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                                Text("Ya has elegido a un trabajador para esta chamba.", fontSize = 13.sp, color = Color.Gray)
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                job.acceptedWorkerId?.let { workerId ->
+                                                    TextButton(onClick = { goToApplicants(jobId) }) {
+                                                        Text("Ver quién", fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                                                    }
+                                                }
+
+                                                Spacer(Modifier.width(4.dp))
+
+                                                // CORRECCIÓN: Botón dinámico para Reabrir el trabajo
+                                                if (state.isActionLoading) {
+                                                    CircularProgressIndicator(color = Color(0xFF2E7D32), modifier = Modifier.size(20.dp))
+                                                } else {
+                                                    TextButton(onClick = { viewModel.liberarTrabajo() }) {
+                                                        Text("Reabrir", fontWeight = FontWeight.Bold, color = Color.Red)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = { goToApplicants(jobId) },
+                                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB)),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Text("Ver postulantes", fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
                                 }
 
                                 Row(
@@ -234,12 +264,13 @@ fun JobDetailScreen(
                                         modifier = Modifier.weight(1f).height(56.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                                         shape = RoundedCornerShape(16.dp),
-                                        border = BorderStroke(1.dp, Color.Gray)
+                                        border = BorderStroke(1.dp, Color.Gray),
+                                        enabled = !job.isClosed
                                     ) {
                                         Text("Editar", fontWeight = FontWeight.Bold, color = Color.Black)
                                     }
                                     Button(
-                                        onClick = { viewModel.eliminarChamba { onDeleteSuccess()} },
+                                        onClick = { viewModel.eliminarChamba { onDeleteSuccess() } },
                                         modifier = Modifier.weight(1f).height(56.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                                         shape = RoundedCornerShape(16.dp)
@@ -249,37 +280,50 @@ fun JobDetailScreen(
                                 }
                             }
                         } else {
-                            // Botón para postulantes (Trabajadores)
+                            // === VISTA DE LOS POSTULANTES / EXTERNOS ===
+                            val isClosed = job.isClosed
+                            val amIAccepted = isClosed && job.acceptedWorkerId == currentUserId
+
                             Button(
                                 onClick = { viewModel.onMainActionClick() },
                                 modifier = Modifier.fillMaxWidth().height(56.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = when {
+                                        amIAccepted -> Color(0xFF2E7D32)
                                         state.isApplied -> Color.Red
                                         else -> Color(0xFF7B8EDB)
-                                    }
+                                    },
+                                    disabledContainerColor = when {
+                                        amIAccepted -> Color(0xFF2E7D32)
+                                        else -> Color.Gray
+                                    },
+                                    disabledContentColor = Color.White
                                 ),
                                 shape = RoundedCornerShape(16.dp),
-                                enabled = !state.isActionLoading && !state.isLoading
+                                enabled = !state.isActionLoading && !state.isLoading && !isClosed
                             ) {
                                 if (state.isActionLoading) {
                                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                                 } else {
                                     Text(
-                                        text = if (state.isApplied) "Cancelar postulación" else "Postularse al trabajo",
-                                        fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
+                                        text = when {
+                                            amIAccepted -> "¡Fuiste aceptado para el trabajo!"
+                                            isClosed -> "Trabajo ya asignado"
+                                            state.isApplied -> "Cancelar postulación"
+                                            else -> "Postularse al trabajo"
+                                        },
+                                        fontSize = 16.sp, fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
                         }
-
                         Spacer(modifier = Modifier.height(20.dp))
                     }
                 }
             }
         }
 
-        // --- DIÁLOGOS Y NOTIFICACIONES ---
+        // --- DIÁLOGOS DE CONFIRMACIÓN ---
         if (state.showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.onDismissDialog() },
@@ -298,6 +342,7 @@ fun JobDetailScreen(
             )
         }
 
+        // --- FEEDBACK (SNACKBAR) ---
         state.userMessage?.let { message ->
             Snackbar(
                 modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),

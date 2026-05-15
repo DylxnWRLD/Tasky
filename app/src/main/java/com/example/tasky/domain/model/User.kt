@@ -25,4 +25,5 @@ data class User(
 
     @SerialName("rating")
     val rating: Double = 0.0
+
 )

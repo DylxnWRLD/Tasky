@@ -30,11 +30,13 @@ import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
 import com.example.tasky.ui.create.CreateJobViewModel
 import androidx.compose.ui.platform.LocalContext
+import com.example.tasky.domain.usecase.AcceptApplicantUseCase
 import com.example.tasky.ui.jobs.detail.WorkerProfileScreen
 import com.example.tasky.ui.jobs.detail.WorkerProfileViewModel
 import com.example.tasky.ui.profile.UserProfileRoute
 import com.example.tasky.ui.profile.UserProfileViewModel
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
+import com.example.tasky.domain.usecase.GetWorkerProfileUseCase
 
 @Composable
 fun AppNavigation() {
@@ -217,8 +219,9 @@ fun AppNavigation() {
 
             val profileViewModel = remember {
                 val repository = JobRepositoryImpl(contexto)
-                val useCase = com.example.tasky.domain.usecase.GetWorkerProfileUseCase(repository)
-                WorkerProfileViewModel(useCase)
+                val getProfileUC = GetWorkerProfileUseCase(repository)
+                val acceptUC = AcceptApplicantUseCase(repository)
+                WorkerProfileViewModel(getProfileUC, acceptUC) // Le pasamos ambos
             }
 
             WorkerProfileScreen(

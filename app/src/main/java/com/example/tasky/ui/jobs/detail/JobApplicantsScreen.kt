@@ -21,7 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.tasky.domain.model.User
+import com.example.tasky.domain.model.JobApplicant
 
 @Composable
 fun JobApplicantsScreen(
@@ -46,15 +46,14 @@ fun JobApplicantsScreen(
                     .padding(top = 40.dp, start = 16.dp, bottom = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onNavigateBack,
-                ) {
+                IconButton(onClick = onNavigateBack) {
                     Icon(
                         Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color.White,
-                    )                }
+                    )
+                }
                 Spacer(Modifier.width(16.dp))
                 Text(
-                    "Postulantes:",
+                    "Postulantes",
                     modifier = Modifier.padding(start = 20.dp),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold,
@@ -71,6 +70,7 @@ fun JobApplicantsScreen(
                 .padding(20.dp)
         ) {
             Text(text = jobTitle, fontWeight = FontWeight.Bold, fontSize = 20.sp, color = Color.Black)
+            Spacer(Modifier.height(8.dp))
 
             when {
                 state.isLoading -> {
@@ -98,7 +98,7 @@ fun JobApplicantsScreen(
 
                 else -> {
                     Text(
-                        text = "${state.applicants.size} postulantes para este trabajo",
+                        text = "${state.applicants.size} postulaciones para este trabajo",
                         fontSize = 14.sp,
                         color = Color.Black
                     )
@@ -108,13 +108,13 @@ fun JobApplicantsScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(state.applicants) { user ->
+                        items(state.applicants) { applicant ->
                             Surface(
-                                onClick = { onApplicantClick(user.id) },
+                                onClick = { onApplicantClick(applicant.user.id) },
                                 color = Color.Transparent,
                                 shape = RoundedCornerShape(20.dp)
                             ) {
-                                ApplicantCard(user)
+                                ApplicantCard(applicant = applicant)
                             }
                         }
                     }
@@ -125,12 +125,18 @@ fun JobApplicantsScreen(
 }
 
 @Composable
-fun ApplicantCard(user: User) {
+fun ApplicantCard(applicant: JobApplicant) {
+    val user = applicant.user
+    val isAccepted = applicant.status == "aceptado"
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFFD9D9D9),
-        border = BorderStroke(2.dp, Color(0xFF7B8EDB))
+        color = if (isAccepted) Color(0xFFE8F5E9) else Color(0xFFD9D9D9),
+        border = BorderStroke(
+            width = 2.dp,
+            color = if (isAccepted) Color(0xFF2E7D32) else Color(0xFF7B8EDB)
+        )
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -139,7 +145,7 @@ fun ApplicantCard(user: User) {
             Surface(
                 modifier = Modifier.size(70.dp),
                 shape = CircleShape,
-                border = BorderStroke(1.dp, Color.Black)
+                border = BorderStroke(1.dp, if (isAccepted) Color(0xFF2E7D32) else Color.Black)
             ) {
                 AsyncImage(
                     model = user.profileImage,
@@ -151,13 +157,18 @@ fun ApplicantCard(user: User) {
 
             Spacer(Modifier.width(16.dp))
 
-            Column {
-                Text(
-                    text = user.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = Color.Black
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = user.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = if (isAccepted) Color(0xFF2E7D32) else Color.Black
+                    )
+                    if (isAccepted) {
+                        Spacer(Modifier.width(6.dp))
+                    }
+                }
 
                 Row {
                     repeat(5) { index ->
@@ -171,8 +182,18 @@ fun ApplicantCard(user: User) {
                 Text(
                     text = user.description ?: "Sin descripción",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.DarkGray
+                    color = if (isAccepted) Color(0xFF388E3C) else Color.DarkGray
                 )
+
+                if (isAccepted) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "Seleccionado para la chamba",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 11.sp,
+                        color = Color(0xFF2E7D32)
+                    )
+                }
             }
         }
     }
