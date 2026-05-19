@@ -48,13 +48,24 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    GestorDeSacudidas (
+    // Aca se define como es que va a ejecutarse todo lo del sensor de movimiento
+    GestorDeSacudidas(
         onShake = {
-            if (navController.currentDestination?.route != "pantalla_reporte") {
-                navController.navigate("pantalla_reporte")
+            // Se extrae la ruta actual para saber dónde chingados está el usuario
+            val rutaActual = navController.currentDestination?.route
+
+            val pantallasBloqueadas = listOf("login", "register", "forgot_password", "pantalla_reporte")
+
+            if (rutaActual !in pantallasBloqueadas) {
+                val usuarioLogueado = SupabaseClient.client.auth.currentUserOrNull()
+
+                if (usuarioLogueado != null) {
+                    navController.navigate("pantalla_reporte")
+                }
             }
         }
     )
+
 
     NavHost(
         navController = navController,
@@ -313,16 +324,13 @@ fun AppNavigation() {
             val contexto = LocalContext.current
             val scope = rememberCoroutineScope()
 
-            // Se jala el repositorio para tener acceso a la función de la base de datos
             val jobRepository = remember { JobRepositoryImpl(contexto) }
 
             ReportScreen(
                 onBack = { navController.popBackStack() },
                 onEnviar = { textoReporte ->
-                    // Se lanza la madre asíncrona para no trabar el celular
                     scope.launch {
                         try {
-                            // Se saca el ID del wey logueado al momento
                             val user = SupabaseClient.client.auth.currentUserOrNull()
 
                             if (user != null) {

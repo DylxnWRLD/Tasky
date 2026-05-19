@@ -56,7 +56,7 @@ fun ReportScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "¿Qué chingados falló?",
+                text = "¿Cuál es el problema?",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
@@ -64,7 +64,7 @@ fun ReportScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Describe el error que encontraste. La información se subirá en chinga a la base de datos para su revisión.",
+                text = "Describe el error que encontraste. La información se subirá a la base de datos para su revisión.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -82,7 +82,7 @@ fun ReportScreen(
                 isError = isError,
                 supportingText = {
                     if (isError) {
-                        Text("No mames, escribe algo antes de intentar enviar.")
+                        Text("Llena el campo antes de enviar")
                     }
                 },
                 modifier = Modifier
