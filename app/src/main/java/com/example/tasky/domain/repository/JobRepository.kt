@@ -34,4 +34,6 @@ interface JobRepository {
     suspend fun acceptApplicant(workerId: String, jobId: String): Result<Unit>
 
     suspend fun cancelWorkerSelection(jobId: String, workerId: String): Result<Unit>
+
+    suspend fun enviarReporte(userId: String, texto: String): Result<Unit>
 }

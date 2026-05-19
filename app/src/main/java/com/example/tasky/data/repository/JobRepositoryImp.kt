@@ -6,6 +6,7 @@ import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.data.remote.dto.ApplicationDto
 import com.example.tasky.data.remote.dto.JobDto
 import com.example.tasky.data.remote.dto.JobInsertDto
+import com.example.tasky.data.remote.dto.ReporteDto
 import com.example.tasky.data.remote.dto.UserDto
 import com.example.tasky.data.remote.dto.toDomain
 import com.example.tasky.domain.model.Job
@@ -292,6 +293,16 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                         eq("worker_id", workerId)
                     }
                 }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun enviarReporte(userId: String, texto: String): Result<Unit> {
+        return try {
+            val reporte = ReporteDto(userId = userId, descripcion = texto)
+            SupabaseClient.client.from("reportes").insert(reporte)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

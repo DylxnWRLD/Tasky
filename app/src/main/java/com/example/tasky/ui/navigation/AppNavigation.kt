@@ -30,6 +30,8 @@ import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
 import com.example.tasky.ui.create.CreateJobViewModel
 import androidx.compose.ui.platform.LocalContext
+import com.example.tasky.data.remote.SupabaseClient
+import com.example.tasky.domain.model.GestorDeSacudidas
 import com.example.tasky.domain.usecase.AcceptApplicantUseCase
 import com.example.tasky.ui.jobs.detail.WorkerProfileScreen
 import com.example.tasky.ui.jobs.detail.WorkerProfileViewModel
@@ -37,11 +39,22 @@ import com.example.tasky.ui.profile.UserProfileRoute
 import com.example.tasky.ui.profile.UserProfileViewModel
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
 import com.example.tasky.domain.usecase.GetWorkerProfileUseCase
+import com.example.tasky.ui.report.ReportScreen
+import io.github.jan.supabase.gotrue.auth
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
+
+    GestorDeSacudidas (
+        onShake = {
+            if (navController.currentDestination?.route != "pantalla_reporte") {
+                navController.navigate("pantalla_reporte")
+            }
+        }
+    )
 
     NavHost(
         navController = navController,
@@ -291,6 +304,40 @@ fun AppNavigation() {
                 onJobClick = { jobId ->
                     // Navega derechito a los detalles
                     navController.navigate("job_detail/$jobId")
+                }
+            )
+        }
+
+        // Formulario de Reporte
+        composable("pantalla_reporte") {
+            val contexto = LocalContext.current
+            val scope = rememberCoroutineScope()
+
+            // Se jala el repositorio para tener acceso a la función de la base de datos
+            val jobRepository = remember { JobRepositoryImpl(contexto) }
+
+            ReportScreen(
+                onBack = { navController.popBackStack() },
+                onEnviar = { textoReporte ->
+                    // Se lanza la madre asíncrona para no trabar el celular
+                    scope.launch {
+                        try {
+                            // Se saca el ID del wey logueado al momento
+                            val user = SupabaseClient.client.auth.currentUserOrNull()
+
+                            if (user != null) {
+                                jobRepository.enviarReporte(user.id, textoReporte)
+                                Toast.makeText(contexto, "Reporte enviado exitosamente", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(contexto, "Inicia sesión primero para reportar", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (e: Exception) {
+                            Toast.makeText(contexto, "Error en el reporte: ${e.message}", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            // Se saca al usuario de la pantalla de reportes a huevo
+                            navController.popBackStack()
+                        }
+                    }
                 }
             )
         }
