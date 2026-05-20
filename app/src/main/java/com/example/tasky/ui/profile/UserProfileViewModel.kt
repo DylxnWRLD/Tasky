@@ -9,12 +9,14 @@ import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.repository.JobRepository
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
+import com.example.tasky.domain.usecase.UpdateUserProfileUseCase
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
 class UserProfileViewModel(
     private val getUserProfileUseCase: GetUserProfileUseCase,
-    private val jobRepository: JobRepository
+    private val jobRepository: JobRepository,
+    private val updateUserProfileUseCase: UpdateUserProfileUseCase
 ) : ViewModel() {
 
     var state by mutableStateOf(UserProfileState())
@@ -82,5 +84,69 @@ class UserProfileViewModel(
 
     fun clearError() {
         state = state.copy(error = null)
+    }
+
+    fun toggleEditing() {
+        state = state.copy(isEditing = !state.isEditing)
+    }
+
+    fun updateProfileField(
+        field: String,
+        value: Any?
+    ) {
+        val currentUser = state.user ?: return
+
+        val updatedUser = when (field) {
+            "name" -> {
+                val stringValue = value as? String ?: currentUser.name
+                currentUser.copy(name = stringValue)
+            }
+            "location" -> {
+                val stringValue = value as? String
+                currentUser.copy(location = stringValue)
+            }
+            "experience" -> {
+                val stringValue = value as? String
+                currentUser.copy(experience = stringValue)
+            }
+            "bio" -> {
+                val stringValue = value as? String
+                currentUser.copy(bio = stringValue)
+            }
+            "skills" -> {
+                @Suppress("UNCHECKED_CAST")
+                val listValue = value as? List<String>
+                currentUser.copy(skills = listValue ?: currentUser.skills)
+            }
+            else -> currentUser
+        }
+        state = state.copy(user = updatedUser)
+    }
+
+    fun saveProfile() {
+        viewModelScope.launch {
+            state = state.copy(isSaving = true, error = null)
+
+            val currentUser = state.user ?: return@launch
+
+            val result = updateUserProfileUseCase(
+                userId = currentUser.id,
+                name = currentUser.name,
+                location = currentUser.location,
+                experience = currentUser.experience,
+                bio = currentUser.bio,
+                skills = currentUser.skills,
+                profileImage = currentUser.profileImage
+            )
+
+            state = if (result.isSuccess) {
+                state.copy(isEditing = false, isSaving = false)
+            } else {
+                state.copy(
+                    isSaving = false,
+                    error = result.exceptionOrNull()?.message ?: "Error al guardar"
+                )
+            }
+        }
     }
 }

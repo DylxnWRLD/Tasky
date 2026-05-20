@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,22 +32,29 @@ fun UserProfileScreen(
     state: UserProfileState,
     myJobs: List<Job>,
     isLoadingJobs: Boolean,
+    isEditing: Boolean,
+    isSaving: Boolean,
     onNavigateBack: () -> Unit,
     onEditProfile: () -> Unit,
-    onJobClick: (String) -> Unit
+    onJobClick: (String) -> Unit,
+    onUpdateField: (String, Any?) -> Unit,
+    onSaveProfile: () -> Unit,
+    onCancelEdit: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mi Perfil") },
+                title = { Text(if (isEditing) "Editar Perfil" else "Mi Perfil") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
-                    IconButton(onClick = onEditProfile) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar perfil")
+                    if (!isEditing) {
+                        IconButton(onClick = onEditProfile) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar perfil")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -92,7 +99,12 @@ fun UserProfileScreen(
                 user = state.user,
                 myJobs = myJobs,
                 isLoadingJobs = isLoadingJobs,
+                isEditing = isEditing,
+                isSaving = isSaving,
                 onJobClick = onJobClick,
+                onUpdateField = onUpdateField,
+                onSaveProfile = onSaveProfile,
+                onCancelEdit = onCancelEdit,
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -104,7 +116,12 @@ private fun ProfileContent(
     user: User?,
     myJobs: List<Job>,
     isLoadingJobs: Boolean,
+    isEditing: Boolean,
+    isSaving: Boolean,
     onJobClick: (String) -> Unit,
+    onUpdateField: (String, Any?) -> Unit,
+    onSaveProfile: () -> Unit,
+    onCancelEdit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -114,13 +131,135 @@ private fun ProfileContent(
             .background(Color(0xFFF5F5F5))
     ) {
         // Header con foto y nombre
-        ProfileHeader(user = user)
+        ProfileHeader(user = user, isEditing = isEditing, onUpdateField = onUpdateField)
 
         // Rating
         RatingSection(rating = user?.rating ?: 5.0)
 
         // Información del perfil
-        ProfileInfoSection(user = user)
+        if (isEditing) {
+            // Formulario editable
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    shadowElevation = 2.dp,
+                    color = Color.White
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        EditableProfileInfoRow(
+                            icon = Icons.Default.Email,
+                            label = "Correo electrónico",
+                            value = user?.email,
+                            isEditing = false,
+                            onValueChange = {}
+                        )
+
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                        EditableProfileInfoRow(
+                            icon = Icons.Default.Person,
+                            label = "Nombre",
+                            value = user?.name,
+                            isEditing = isEditing,
+                            onValueChange = { newName ->
+                                onUpdateField("name", newName)
+                            }
+                        )
+
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                        EditableProfileInfoRow(
+                            icon = Icons.Default.LocationOn,
+                            label = "Ubicación",
+                            value = user?.location,
+                            isEditing = isEditing,
+                            onValueChange = { newLocation ->
+                                onUpdateField("location", newLocation)
+                            }
+                        )
+
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                        EditableProfileInfoRow(
+                            icon = Icons.Default.WorkHistory,
+                            label = "Experiencia",
+                            value = user?.experience,
+                            isEditing = isEditing,
+                            onValueChange = { newExperience ->
+                                onUpdateField("experience", newExperience)
+                            }
+                        )
+
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                        EditableSkillsSection(
+                            skills = user?.skills,
+                            isEditing = isEditing,
+                            onSkillsChange = { newSkills ->
+                                onUpdateField("skills", newSkills)
+                            }
+                        )
+
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                        EditableProfileInfoRow(
+                            icon = Icons.Default.Info,
+                            label = "Biografía",
+                            value = user?.bio,
+                            isEditing = isEditing,
+                            onValueChange = { newBio ->
+                                onUpdateField("bio", newBio)
+                            },
+                            multiLine = true
+                        )
+                    }
+                }
+
+                // Botones de acción
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onCancelEdit,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cancelar")
+                    }
+
+                    Button(
+                        onClick = onSaveProfile,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB)),
+                        enabled = !isSaving
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                        } else {
+                            Text("Guardar")
+                        }
+                    }
+                }
+            }
+        } else {
+            // Modo vista normal
+            ProfileInfoSection(user = user)
+        }
 
         // Trabajos publicados
         PublishedJobsSection(jobs = myJobs, isLoading = isLoadingJobs, onJobClick = onJobClick)
@@ -130,87 +269,7 @@ private fun ProfileContent(
 }
 
 @Composable
-private fun PublishedJobsSection(
-    jobs: List<Job>,
-    isLoading: Boolean,
-    onJobClick: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 2.dp,
-        color = Color.White
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Work, contentDescription = "Trabajos", tint = Color(0xFF7B8EDB), modifier = Modifier.size(24.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text("Trabajos Publicados", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
-                }
-                Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFE8EAF6)) {
-                    // Muestra el número real de trabajos
-                    Text(text = "${jobs.size}", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B8EDB))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Lógica perrona para iterar la base de datos
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF7B8EDB))
-                }
-            } else if (jobs.isEmpty()) {
-                Text("Aún no has publicado ni un trabajo.", color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
-            } else {
-                jobs.forEachIndexed { index, job ->
-                    JobItem(
-                        title = job.title,
-                        category = job.category,
-                        date = "Reciente", // O puedes formatear tu job.scheduledDate si lo tienes
-                        status = job.status ?: "Activo",
-                        payment = "$${job.payment}",
-                        onClick = { onJobClick(job.id ?: "") }
-                    )
-
-                    if (index < jobs.size - 1) {
-                        HorizontalDivider(
-                            color = Color(0xFFF0F0F0),
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedButton(
-                onClick = { /* Funcionalidad futura */ },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF7B8EDB))
-            ) {
-                Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ver todos los trabajos")
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProfileHeader(user: User?) {
+private fun ProfileHeader(user: User?, isEditing: Boolean, onUpdateField: (String, Any?) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -250,13 +309,41 @@ private fun ProfileHeader(user: User?) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Nombre de usuario
-            Text(
-                text = user?.name ?: "Usuario",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
+            // Nombre de usuario (editable solo si está en modo edición y no es el rol)
+            if (isEditing) {
+                OutlinedTextField(
+                    value = user?.name ?: "",
+                    onValueChange = { newName ->
+                        onUpdateField("name", newName)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp),
+                    placeholder = { Text("Tu nombre") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedPlaceholderColor = Color.White.copy(alpha = 0.7f),
+                        unfocusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
+                        cursorColor = Color.White
+                    ),
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    ),
+                    singleLine = true
+                )
+            } else {
+                Text(
+                    text = user?.name ?: "Usuario",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
@@ -417,6 +504,61 @@ private fun ProfileInfoRow(
 }
 
 @Composable
+private fun EditableProfileInfoRow(
+    icon: ImageVector,
+    label: String,
+    value: String?,
+    isEditing: Boolean,
+    onValueChange: (String) -> Unit,
+    multiLine: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = Color(0xFF7B8EDB),
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+
+            if (isEditing) {
+                OutlinedTextField(
+                    value = value ?: "",
+                    onValueChange = onValueChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = !multiLine,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF7B8EDB),
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+            } else {
+                Text(
+                    text = value?.takeIf { it.isNotBlank() } ?: "No especificado",
+                    fontSize = 16.sp,
+                    color = if (value.isNullOrBlank()) Color.Gray else Color(0xFF212121),
+                    fontStyle = if (value.isNullOrBlank()) FontStyle.Italic else FontStyle.Normal
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun SkillsSection(skills: List<String>?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -482,6 +624,95 @@ private fun SkillsSection(skills: List<String>?) {
 }
 
 @Composable
+private fun EditableSkillsSection(
+    skills: List<String>?,
+    isEditing: Boolean,
+    onSkillsChange: (List<String>) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            Icons.Default.Build,
+            contentDescription = "Habilidades",
+            tint = Color(0xFF7B8EDB),
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Habilidades",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (isEditing) {
+                var skillsText by remember { mutableStateOf(skills?.joinToString(", ") ?: "") }
+
+                OutlinedTextField(
+                    value = skillsText,
+                    onValueChange = {
+                        skillsText = it
+                        onSkillsChange(
+                            it.split(",")
+                                .map { skill -> skill.trim() }
+                                .filter { it.isNotEmpty() }
+                        )
+                    },
+                    placeholder = { Text("Ej: Plomería, Electricidad, Carpintería", fontSize = 12.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF7B8EDB),
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+                Text(
+                    text = "Separa las habilidades con comas",
+                    fontSize = 10.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            } else {
+                if (skills.isNullOrEmpty()) {
+                    Text(
+                        text = "Sin habilidades especificadas",
+                        fontSize = 14.sp,
+                        color = Color(0xFF9E9E9E),
+                        fontStyle = FontStyle.Italic
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        skills.chunked(3).forEach { rowSkills ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                rowSkills.forEach { skill ->
+                                    Surface(
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = Color(0xFFE8EAF6)
+                                    ) {
+                                        Text(
+                                            text = skill,
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                            fontSize = 13.sp,
+                                            color = Color(0xFF3949AB)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun BioSection(bio: String?) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -510,10 +741,89 @@ private fun BioSection(bio: String?) {
                 text = bio ?: "Sin biografía",
                 fontSize = 14.sp,
                 color = if (bio == null) Color(0xFF9E9E9E) else Color(0xFF424242),
-                fontStyle = if (bio == null) FontStyle.Italic
-                else FontStyle.Normal,
+                fontStyle = if (bio == null) FontStyle.Italic else FontStyle.Normal,
                 lineHeight = 20.sp
             )
+        }
+    }
+}
+
+@Composable
+private fun PublishedJobsSection(
+    jobs: List<Job>,
+    isLoading: Boolean,
+    onJobClick: (String) -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 2.dp,
+        color = Color.White
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Work, contentDescription = "Trabajos", tint = Color(0xFF7B8EDB), modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("Trabajos Publicados", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF212121))
+                }
+                Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFE8EAF6)) {
+                    // Muestra el número real de trabajos
+                    Text(text = "${jobs.size}", modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B8EDB))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Lógica perrona para iterar la base de datos
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF7B8EDB))
+                }
+            } else if (jobs.isEmpty()) {
+                Text("Aún no has publicado ni un trabajo.", color = Color.Gray, modifier = Modifier.padding(vertical = 16.dp))
+            } else {
+                jobs.forEachIndexed { index, job ->
+                    JobItem(
+                        title = job.title,
+                        category = job.category,
+                        date = "Reciente", // O puedes formatear tu job.scheduledDate si lo tienes
+                        status = job.status ?: "Activo",
+                        payment = "$${job.payment}",
+                        onClick = { onJobClick(job.id ?: "") }
+                    )
+
+                    if (index < jobs.size - 1) {
+                        HorizontalDivider(
+                            color = Color(0xFFF0F0F0),
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = { /* Funcionalidad futura */ },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF7B8EDB))
+            ) {
+                Icon(Icons.Default.List, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Ver todos los trabajos")
+            }
         }
     }
 }
@@ -634,7 +944,7 @@ fun UserProfileRoute(
     viewModel: UserProfileViewModel,
     onNavigateBack: () -> Unit,
     onEditProfile: () -> Unit,
-    onJobClick: (String) -> Unit // <-- Añadido al route principal
+    onJobClick: (String) -> Unit
 ) {
     val state = viewModel.state
 
@@ -642,8 +952,20 @@ fun UserProfileRoute(
         state = state,
         myJobs = viewModel.myJobs,
         isLoadingJobs = viewModel.isLoadingJobs,
+        isEditing = state.isEditing,
+        isSaving = state.isSaving,
         onNavigateBack = onNavigateBack,
         onEditProfile = onEditProfile,
-        onJobClick = onJobClick
+        onJobClick = onJobClick,
+        onUpdateField = { field, value ->
+            viewModel.updateProfileField(field, value)
+        },
+        onSaveProfile = {
+            viewModel.saveProfile()
+        },
+        onCancelEdit = {
+            viewModel.toggleEditing()
+            viewModel.loadUserProfile()
+        }
     )
 }
