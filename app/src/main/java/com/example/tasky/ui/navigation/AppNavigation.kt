@@ -31,6 +31,7 @@ import com.example.tasky.ui.create.CreateJobScreen
 import com.example.tasky.ui.create.CreateJobViewModel
 import androidx.compose.ui.platform.LocalContext
 import com.example.tasky.data.remote.SupabaseClient
+import com.example.tasky.data.repository.UserRepositoryImpl
 import com.example.tasky.domain.model.GestorDeSacudidas
 import com.example.tasky.domain.usecase.AcceptApplicantUseCase
 import com.example.tasky.ui.jobs.detail.WorkerProfileScreen
@@ -39,6 +40,7 @@ import com.example.tasky.ui.profile.UserProfileRoute
 import com.example.tasky.ui.profile.UserProfileViewModel
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
 import com.example.tasky.domain.usecase.GetWorkerProfileUseCase
+import com.example.tasky.domain.usecase.UpdateUserProfileUseCase
 import com.example.tasky.ui.report.ReportScreen
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
@@ -293,27 +295,30 @@ fun AppNavigation() {
             )
         }
 
+
         composable("profile") {
             val contexto = LocalContext.current
             val viewModel = remember {
-                val authRepository = AuthRepositoryImpl() // o el que le pases el contexto, si ya lo pedía
-                val jobRepository = JobRepositoryImpl(contexto) // Inyección del puto repo
-                val useCase = GetUserProfileUseCase(authRepository)
-                UserProfileViewModel(useCase, jobRepository)
+                val authRepository = AuthRepositoryImpl()
+                val jobRepository = JobRepositoryImpl(contexto)
+                val userRepository = UserRepositoryImpl()
+                val updateProfileUseCase = UpdateUserProfileUseCase(userRepository)
+                val getProfileUseCase = GetUserProfileUseCase(authRepository)
+
+                UserProfileViewModel(
+                    getUserProfileUseCase = getProfileUseCase,
+                    jobRepository = jobRepository,
+                    updateUserProfileUseCase = updateProfileUseCase
+                )
             }
 
             UserProfileRoute(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfile = {
-                    Toast.makeText(
-                        contexto, // Ya jala la variable contexto directamente
-                        "Edición de perfil próximamente",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    viewModel.toggleEditing()
                 },
                 onJobClick = { jobId ->
-                    // Navega derechito a los detalles
                     navController.navigate("job_detail/$jobId")
                 }
             )
