@@ -591,30 +591,25 @@ private fun SkillsSection(skills: List<String>?) {
                     fontStyle = FontStyle.Italic
                 )
             } else {
-                // Mostrar chips de habilidades
+                // Mostrar habilidades como lista vertical
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    skills.chunked(3).forEach { rowSkills ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    skills.forEach { skill ->
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFFE8EAF6),
+                            modifier = Modifier.wrapContentSize()
                         ) {
-                            rowSkills.forEach { skill ->
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = Color(0xFFE8EAF6)
-                                ) {
-                                    Text(
-                                        text = skill,
-                                        modifier = Modifier.padding(
-                                            horizontal = 12.dp,
-                                            vertical = 6.dp
-                                        ),
-                                        fontSize = 13.sp,
-                                        color = Color(0xFF3949AB)
-                                    )
-                                }
-                            }
+                            Text(
+                                text = skill,
+                                modifier = Modifier.padding(
+                                    horizontal = 12.dp,
+                                    vertical = 6.dp
+                                ),
+                                fontSize = 13.sp,
+                                color = Color(0xFF3949AB)
+                            )
                         }
                     }
                 }
@@ -678,6 +673,36 @@ private fun EditableSkillsSection(
                     color = Color.Gray,
                     modifier = Modifier.padding(top = 4.dp)
                 )
+
+                // Mostrar vista previa de las habilidades actuales
+                if (skills?.isNotEmpty() == true) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Vista previa:",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        skills.forEach { skill ->
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color(0xFFE8EAF6),
+                                modifier = Modifier.wrapContentSize()
+                            ) {
+                                Text(
+                                    text = skill,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF3949AB)
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
                 if (skills.isNullOrEmpty()) {
                     Text(
@@ -687,22 +712,22 @@ private fun EditableSkillsSection(
                         fontStyle = FontStyle.Italic
                     )
                 } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        skills.chunked(3).forEach { rowSkills ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                rowSkills.forEach { skill ->
-                                    Surface(
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = Color(0xFFE8EAF6)
-                                    ) {
-                                        Text(
-                                            text = skill,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            fontSize = 13.sp,
-                                            color = Color(0xFF3949AB)
-                                        )
-                                    }
-                                }
+                    // Mostrar habilidades como lista vertical
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        skills.forEach { skill ->
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = Color(0xFFE8EAF6),
+                                modifier = Modifier.wrapContentSize()
+                            ) {
+                                Text(
+                                    text = skill,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF3949AB)
+                                )
                             }
                         }
                     }
