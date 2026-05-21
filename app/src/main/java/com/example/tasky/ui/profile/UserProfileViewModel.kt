@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.model.Job
+import com.example.tasky.domain.model.User
 import com.example.tasky.domain.repository.JobRepository
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
 import com.example.tasky.domain.usecase.UpdateUserProfileUseCase
@@ -22,8 +23,18 @@ class UserProfileViewModel(
     var state by mutableStateOf(UserProfileState())
         private set
 
+    var myJobs by mutableStateOf<List<Job>>(emptyList())
+        private set
+
+    var isLoadingJobs by mutableStateOf(false)
+        private set
+
+    private var onSaveSuccessCallback: (() -> Unit)? = null
+    private var onSaveErrorCallback: ((String) -> Unit)? = null
+
     init {
         loadUserProfile()
+        loadMyJobs()
     }
 
     fun loadUserProfile() {
@@ -46,22 +57,10 @@ class UserProfileViewModel(
         }
     }
 
-    var myJobs by mutableStateOf<List<Job>>(emptyList())
-        private set
-
-    var isLoadingJobs by mutableStateOf(false)
-        private set
-
-    init {
-        // Llama a tus otras funciones de carga aquí
-        loadMyJobs()
-    }
-
     private fun loadMyJobs() {
         viewModelScope.launch {
             isLoadingJobs = true
             try {
-                // Sacamos la ID del cabrón que está usando la app
                 val user = SupabaseClient.client.auth.currentUserOrNull()
                 val userId = user?.id
 
@@ -71,19 +70,15 @@ class UserProfileViewModel(
                             myJobs = jobs
                         }
                         .onFailure {
-                            // Aquí podrías meter un estado de error si quieres
+                            // Manejo de error silencioso
                         }
                 }
             } catch (e: Exception) {
-                // Manejo de la excepción a la verga
+                // Manejo de excepción silencioso
             } finally {
                 isLoadingJobs = false
             }
         }
-    }
-
-    fun clearError() {
-        state = state.copy(error = null)
     }
 
     fun toggleEditing() {
@@ -127,7 +122,11 @@ class UserProfileViewModel(
         viewModelScope.launch {
             state = state.copy(isSaving = true, error = null)
 
-            val currentUser = state.user ?: return@launch
+            val currentUser = state.user ?: run {
+                state = state.copy(isSaving = false)
+                onSaveErrorCallback?.invoke("Usuario no encontrado")
+                return@launch
+            }
 
             val result = updateUserProfileUseCase(
                 userId = currentUser.id,
@@ -139,14 +138,41 @@ class UserProfileViewModel(
                 profileImage = currentUser.profileImage
             )
 
-            state = if (result.isSuccess) {
-                state.copy(isEditing = false, isSaving = false)
+            if (result.isSuccess) {
+                val refreshedUser = getUserProfileUseCase()
+                if (refreshedUser.isSuccess) {
+                    state = state.copy(
+                        user = refreshedUser.getOrNull(),
+                        isEditing = false,
+                        isSaving = false
+                    )
+                } else {
+                    state = state.copy(
+                        isEditing = false,
+                        isSaving = false
+                    )
+                }
+                onSaveSuccessCallback?.invoke()
             } else {
-                state.copy(
+                val errorMsg = result.exceptionOrNull()?.message ?: "Error al guardar el perfil"
+                state = state.copy(
                     isSaving = false,
-                    error = result.exceptionOrNull()?.message ?: "Error al guardar"
+                    error = errorMsg
                 )
+                onSaveErrorCallback?.invoke(errorMsg)
             }
         }
+    }
+
+    fun setOnSaveSuccessCallback(callback: () -> Unit) {
+        onSaveSuccessCallback = callback
+    }
+
+    fun setOnSaveErrorCallback(callback: (String) -> Unit) {
+        onSaveErrorCallback = callback
+    }
+
+    fun clearError() {
+        state = state.copy(error = null)
     }
 }

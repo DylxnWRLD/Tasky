@@ -312,6 +312,14 @@ fun AppNavigation() {
                 )
             }
 
+            viewModel.setOnSaveSuccessCallback {
+                Toast.makeText(contexto, "Perfil actualizado correctamente", Toast.LENGTH_SHORT).show()
+            }
+
+            viewModel.setOnSaveErrorCallback { errorMsg ->
+                Toast.makeText(contexto, "Error: $errorMsg", Toast.LENGTH_SHORT).show()
+            }
+
             UserProfileRoute(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
