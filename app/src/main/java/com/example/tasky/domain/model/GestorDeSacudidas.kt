@@ -22,7 +22,7 @@ fun GestorDeSacudidas(onShake: () -> Unit) {
         var ultimoY = 0f
         var ultimoZ = 0f
 
-        val umbralSacudida = 500
+        val umbralSacudida = 1000
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
