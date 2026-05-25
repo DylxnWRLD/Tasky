@@ -301,14 +301,15 @@ fun AppNavigation() {
             val viewModel = remember {
                 val authRepository = AuthRepositoryImpl()
                 val jobRepository = JobRepositoryImpl(contexto)
-                val userRepository = UserRepositoryImpl()
+                val userRepository = UserRepositoryImpl(contexto)
                 val updateProfileUseCase = UpdateUserProfileUseCase(userRepository)
                 val getProfileUseCase = GetUserProfileUseCase(authRepository)
 
                 UserProfileViewModel(
                     getUserProfileUseCase = getProfileUseCase,
                     jobRepository = jobRepository,
-                    updateUserProfileUseCase = updateProfileUseCase
+                    updateUserProfileUseCase = updateProfileUseCase,
+                    userRepository = userRepository
                 )
             }
 
@@ -319,6 +320,11 @@ fun AppNavigation() {
             viewModel.setOnSaveErrorCallback { errorMsg ->
                 Toast.makeText(contexto, "Error: $errorMsg", Toast.LENGTH_SHORT).show()
             }
+
+            viewModel.setOnImageUploadSuccessCallback {
+                Toast.makeText(contexto, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show()
+            }
+
 
             UserProfileRoute(
                 viewModel = viewModel,
