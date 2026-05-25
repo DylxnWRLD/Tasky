@@ -57,6 +57,7 @@ fun HomeScreen(
     val jobs = viewModel.jobs
     val isLoading = viewModel.isLoading
     val selectedCategory = viewModel.selectedCategory
+    val searchQuery = viewModel.searchQuery  // <-- NUEVO
 
     Scaffold(
         bottomBar = {
@@ -118,14 +119,14 @@ fun HomeScreen(
                             .padding(24.dp)
                             .fillMaxSize()
                     ) {
+                        // Campo de búsqueda conectado al ViewModel
                         OutlinedTextField(
-                            value = "",
-                            onValueChange = {},
-                            placeholder = { Text("Buscar un trabajo") },
+                            value = searchQuery,
+                            onValueChange = { viewModel.updateSearchQuery(it) }, // <-- ACTUALIZADO
+                            placeholder = { Text("Buscar chamba") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(30.dp),
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Buscar") },
-//                            trailingIcon = { Icon(Icons.Default.FilterList, contentDescription = "Filtros") },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.White,
                                 unfocusedContainerColor = Color.White,
@@ -148,12 +149,40 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        // Mostrar resultados de búsqueda o mensaje si no hay resultados
                         if (isLoading) {
                             Box(
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 CircularProgressIndicator(color = Color(0xFF7B8EDB))
+                            }
+                        } else if (jobs.isEmpty() && searchQuery.isNotBlank()) {
+                            // Mensaje cuando no hay resultados de búsqueda
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.Search,
+                                        contentDescription = "Sin resultados",
+                                        modifier = Modifier.size(64.dp),
+                                        tint = Color.Gray
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "No se encontraron trabajos con \"$searchQuery\"",
+                                        color = Color.Gray,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = "Intenta con otro término",
+                                        color = Color.Gray.copy(alpha = 0.7f),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                             }
                         } else {
                             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {

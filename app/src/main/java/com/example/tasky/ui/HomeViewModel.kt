@@ -27,6 +27,9 @@ class HomeViewModel(private val repository: JobRepository) : ViewModel() {
     var selectedCategory by mutableStateOf("Todas")
         private set
 
+    var searchQuery by mutableStateOf("")
+        private set
+
     init {
         loadJobs()
     }
@@ -49,11 +52,27 @@ class HomeViewModel(private val repository: JobRepository) : ViewModel() {
         aplicarFiltro()
     }
 
+    // NUEVA FUNCIÓN - Con otro nombre para evitar conflicto
+    fun updateSearchQuery(query: String) {
+        searchQuery = query
+        aplicarFiltro()
+    }
+
     private fun aplicarFiltro() {
-        jobs = if (selectedCategory == "Todas") {
+        // Primero filtrar por categoría
+        val filteredByCategory = if (selectedCategory == "Todas") {
             allJobs
         } else {
             allJobs.filter { it.category == selectedCategory }
+        }
+
+        // Luego filtrar por búsqueda en el título (si hay query)
+        jobs = if (searchQuery.isBlank()) {
+            filteredByCategory
+        } else {
+            filteredByCategory.filter { job ->
+                job.title.contains(searchQuery, ignoreCase = true)
+            }
         }
     }
 }
