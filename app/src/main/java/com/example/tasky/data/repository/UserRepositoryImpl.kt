@@ -1,26 +1,22 @@
 package com.example.tasky.data.repository
 
+import android.content.Context
+import android.net.Uri
 import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.model.User
 import com.example.tasky.domain.repository.UserRepository
 import io.github.jan.supabase.postgrest.from
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
-class UserRepositoryImpl : UserRepository {
+class UserRepositoryImpl(private val context: Context) : UserRepository {
 
     private val supabase = SupabaseClient.client
-
-    @Serializable
-    data class UserUpdate(
-        val name: String? = null,
-        val location: String? = null,
-        val experience: String? = null,
-        val bio: String? = null,
-        val skills: List<String>? = null,
-        @SerialName("profile_image")
-        val profileImage: String? = null
-    )
 
     override suspend fun updateUserProfile(
         userId: String,
@@ -32,25 +28,23 @@ class UserRepositoryImpl : UserRepository {
         profileImage: String?
     ): Result<Unit> {
         return try {
-            // Crear un mapa con tipos específicos (String, no Any?)
-            val updates = mutableMapOf<String, String?>()
+            val updates = buildJsonObject {
+                name?.let { put("name", JsonPrimitive(it)) }
+                location?.let { put("location", JsonPrimitive(it)) }
+                experience?.let { put("experience", JsonPrimitive(it)) }
+                bio?.let { put("bio", JsonPrimitive(it)) }
+                profileImage?.let { put("profile_image", JsonPrimitive(it)) }
 
-            name?.let { updates["name"] = it }
-            location?.let { updates["location"] = it }
-            experience?.let { updates["experience"] = it }
-            bio?.let { updates["bio"] = it }
-            profileImage?.let { updates["profile_image"] = it }
-
-            // Manejar skills por separado ya que es una lista
-            if (skills != null) {
-                supabase.from("users").update(
-                    mapOf("skills" to skills)
-                ) {
-                    filter { eq("id", userId) }
+                // Para skills, crear un array JSON
+                if (!skills.isNullOrEmpty()) {
+                    put("skills", buildJsonArray {
+                        skills.forEach { skill ->
+                            add(JsonPrimitive(skill))
+                        }
+                    })
                 }
             }
 
-            // Actualizar el resto de campos
             if (updates.isNotEmpty()) {
                 supabase.from("users").update(updates) {
                     filter { eq("id", userId) }
@@ -59,6 +53,7 @@ class UserRepositoryImpl : UserRepository {
 
             Result.success(Unit)
         } catch (e: Exception) {
+            e.printStackTrace()
             Result.failure(e)
         }
     }
@@ -75,6 +70,23 @@ class UserRepositoryImpl : UserRepository {
             Result.success(user)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun uploadProfileImage(uri: Uri): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val fileName = "profile_${System.currentTimeMillis()}.jpg"
+            val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+                ?: return@withContext Result.failure(Exception("No se pudo leer la imagen"))
+
+            val bucket = supabase.storage.from("imagenes_userProfile")
+            bucket.upload(fileName, bytes)
+            val publicUrl = bucket.publicUrl(fileName)
+
+            Result.success(publicUrl)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(Exception("Error al subir imagen: ${e.message}"))
         }
     }
 }

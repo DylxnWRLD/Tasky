@@ -1,5 +1,6 @@
 package com.example.tasky.ui.profile
 
+import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,6 +10,7 @@ import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.model.User
 import com.example.tasky.domain.repository.JobRepository
+import com.example.tasky.domain.repository.UserRepository
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
 import com.example.tasky.domain.usecase.UpdateUserProfileUseCase
 import io.github.jan.supabase.gotrue.auth
@@ -17,7 +19,8 @@ import kotlinx.coroutines.launch
 class UserProfileViewModel(
     private val getUserProfileUseCase: GetUserProfileUseCase,
     private val jobRepository: JobRepository,
-    private val updateUserProfileUseCase: UpdateUserProfileUseCase
+    private val updateUserProfileUseCase: UpdateUserProfileUseCase,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     var state by mutableStateOf(UserProfileState())
@@ -29,8 +32,12 @@ class UserProfileViewModel(
     var isLoadingJobs by mutableStateOf(false)
         private set
 
+    var isUploadingImage by mutableStateOf(false)  // <-- NUEVO
+        private set
+
     private var onSaveSuccessCallback: (() -> Unit)? = null
     private var onSaveErrorCallback: ((String) -> Unit)? = null
+    private var onImageUploadSuccessCallback: (() -> Unit)? = null  // <-- NUEVO
 
     init {
         loadUserProfile()
@@ -113,9 +120,38 @@ class UserProfileViewModel(
                 val listValue = value as? List<String>
                 currentUser.copy(skills = listValue ?: currentUser.skills)
             }
+            "profileImage" -> {
+                val stringValue = value as? String
+                currentUser.copy(profileImage = stringValue)
+            }
             else -> currentUser
         }
         state = state.copy(user = updatedUser)
+    }
+
+    // NUEVA FUNCIÓN PARA SUBIR FOTO DE PERFIL
+    fun uploadProfileImage(uri: Uri) {
+        viewModelScope.launch {
+            isUploadingImage = true
+            //errorMessage = null
+
+            val result = userRepository.uploadProfileImage(uri)
+
+            if (result.isSuccess) {
+                val imageUrl = result.getOrNull()
+                if (imageUrl != null) {
+                    // Actualizar el estado local con la nueva URL
+                    updateProfileField("profileImage", imageUrl)
+                    // Guardar automáticamente el perfil con la nueva foto
+                    saveProfile()
+                    onImageUploadSuccessCallback?.invoke()
+                }
+            } else {
+                onSaveErrorCallback?.invoke("Error al subir la imagen: ${result.exceptionOrNull()?.message}")
+            }
+
+            isUploadingImage = false
+        }
     }
 
     fun saveProfile() {
@@ -170,6 +206,10 @@ class UserProfileViewModel(
 
     fun setOnSaveErrorCallback(callback: (String) -> Unit) {
         onSaveErrorCallback = callback
+    }
+
+    fun setOnImageUploadSuccessCallback(callback: () -> Unit) {  // <-- NUEVO
+        onImageUploadSuccessCallback = callback
     }
 
     fun clearError() {

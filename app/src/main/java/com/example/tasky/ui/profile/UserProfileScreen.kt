@@ -25,6 +25,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tasky.domain.model.Job
 import com.example.tasky.domain.model.User
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,12 +41,14 @@ fun UserProfileScreen(
     isLoadingJobs: Boolean,
     isEditing: Boolean,
     isSaving: Boolean,
+    isUploadingImage: Boolean,
     onNavigateBack: () -> Unit,
     onEditProfile: () -> Unit,
     onJobClick: (String) -> Unit,
     onUpdateField: (String, Any?) -> Unit,
     onSaveProfile: () -> Unit,
-    onCancelEdit: () -> Unit
+    onCancelEdit: () -> Unit,
+    onUploadImage: (Uri) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -101,10 +110,12 @@ fun UserProfileScreen(
                 isLoadingJobs = isLoadingJobs,
                 isEditing = isEditing,
                 isSaving = isSaving,
+                isUploadingImage = isUploadingImage,
                 onJobClick = onJobClick,
                 onUpdateField = onUpdateField,
                 onSaveProfile = onSaveProfile,
                 onCancelEdit = onCancelEdit,
+                onUploadImage = onUploadImage,
                 modifier = Modifier.padding(paddingValues)
             )
         }
@@ -118,10 +129,12 @@ private fun ProfileContent(
     isLoadingJobs: Boolean,
     isEditing: Boolean,
     isSaving: Boolean,
+    isUploadingImage: Boolean,
     onJobClick: (String) -> Unit,
     onUpdateField: (String, Any?) -> Unit,
     onSaveProfile: () -> Unit,
     onCancelEdit: () -> Unit,
+    onUploadImage: (Uri) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -131,7 +144,13 @@ private fun ProfileContent(
             .background(Color(0xFFF5F5F5))
     ) {
         // Header con foto y nombre
-        ProfileHeader(user = user, isEditing = isEditing, onUpdateField = onUpdateField)
+        ProfileHeader(
+            user = user,
+            isEditing = isEditing,
+            isUploadingImage = isUploadingImage,
+            onUpdateField = onUpdateField,
+            onUploadImage = onUploadImage
+        )
 
         // Rating
         RatingSection(rating = user?.rating ?: 5.0)
@@ -269,7 +288,24 @@ private fun ProfileContent(
 }
 
 @Composable
-private fun ProfileHeader(user: User?, isEditing: Boolean, onUpdateField: (String, Any?) -> Unit) {
+private fun ProfileHeader(
+    user: User?,
+    isEditing: Boolean,
+    isUploadingImage: Boolean,
+    onUpdateField: (String, Any?) -> Unit,
+    onUploadImage: (Uri) -> Unit
+) {
+    val context = LocalContext.current
+
+    // Lanzador para seleccionar imagen de la galería
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            onUploadImage(it)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,29 +323,74 @@ private fun ProfileHeader(user: User?, isEditing: Boolean, onUpdateField: (Strin
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Foto de perfil (placeholder)
-            Surface(
+            // Foto de perfil (ahora con AsyncImage)
+            Box(
                 modifier = Modifier
-                    .size(100.dp),
-                shape = CircleShape,
-                color = Color.White,
-                shadowElevation = 4.dp
+                    .size(100.dp)
+                    .clickable(enabled = isEditing) {
+                        if (isEditing) {
+                            imagePickerLauncher.launch("image/*")
+                        }
+                    }
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape),
+                    color = Color.White,
+                    shadowElevation = 4.dp
                 ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Foto de perfil",
-                        modifier = Modifier.size(60.dp),
-                        tint = Color(0xFF7B8EDB)
-                    )
+                    if (isUploadingImage) {
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color(0xFF7B8EDB))
+                        }
+                    } else if (user?.profileImage != null && user.profileImage.isNotBlank()) {
+                        AsyncImage(
+                            model = user.profileImage,
+                            contentDescription = "Foto de perfil",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = android.R.drawable.ic_menu_report_image)
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier.size(60.dp),
+                                tint = Color(0xFF7B8EDB)
+                            )
+                        }
+                    }
+                }
+
+                // Indicador de edición
+                if (isEditing) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .size(32.dp)
+                            .clip(CircleShape),
+                        color = Color(0xFF7B8EDB),
+                        shadowElevation = 2.dp
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Cambiar foto",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Nombre de usuario (editable solo si está en modo edición y no es el rol)
+            // Nombre de usuario (editable)
             if (isEditing) {
                 OutlinedTextField(
                     value = user?.name ?: "",
@@ -979,6 +1060,7 @@ fun UserProfileRoute(
         isLoadingJobs = viewModel.isLoadingJobs,
         isEditing = state.isEditing,
         isSaving = state.isSaving,
+        isUploadingImage = viewModel.isUploadingImage,
         onNavigateBack = onNavigateBack,
         onEditProfile = onEditProfile,
         onJobClick = onJobClick,
@@ -991,6 +1073,9 @@ fun UserProfileRoute(
         onCancelEdit = {
             viewModel.toggleEditing()
             viewModel.loadUserProfile()
+        },
+        onUploadImage = { uri ->
+            viewModel.uploadProfileImage(uri)
         }
     )
 }

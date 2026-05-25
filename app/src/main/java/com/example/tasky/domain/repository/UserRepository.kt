@@ -1,5 +1,6 @@
 package com.example.tasky.domain.repository
 
+import android.net.Uri
 import com.example.tasky.domain.model.User
 
 interface UserRepository {
@@ -14,4 +15,6 @@ interface UserRepository {
     ): Result<Unit>
 
     suspend fun getUserById(userId: String): Result<User>
+
+    suspend fun uploadProfileImage(uri: Uri): Result<String>
 }
