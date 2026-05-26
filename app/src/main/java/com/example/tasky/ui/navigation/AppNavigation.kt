@@ -40,6 +40,7 @@ import com.example.tasky.ui.profile.UserProfileRoute
 import com.example.tasky.ui.profile.UserProfileViewModel
 import com.example.tasky.domain.usecase.GetUserProfileUseCase
 import com.example.tasky.domain.usecase.GetWorkerProfileUseCase
+import com.example.tasky.domain.usecase.RejectPostulantUseCase
 import com.example.tasky.domain.usecase.UpdateUserProfileUseCase
 import com.example.tasky.ui.report.ReportScreen
 import io.github.jan.supabase.gotrue.auth
@@ -50,7 +51,6 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
 
-    // Aca se define como es que va a ejecutarse todo lo del sensor de movimiento
     GestorDeSacudidas(
         onShake = {
             // Se extrae la ruta actual para saber dónde chingados está el usuario
@@ -247,7 +247,10 @@ fun AppNavigation() {
                 val repository = JobRepositoryImpl(contexto)
                 val getProfileUC = GetWorkerProfileUseCase(repository)
                 val acceptUC = AcceptApplicantUseCase(repository)
-                WorkerProfileViewModel(getProfileUC, acceptUC) // Le pasamos ambos
+                val rejectUC =
+                    RejectPostulantUseCase(repository)
+
+                WorkerProfileViewModel(getProfileUC, acceptUC, rejectUC) // <-- Se lo pasamos como tercer parámetro
             }
 
             WorkerProfileScreen(

@@ -308,4 +308,47 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
             Result.failure(e)
         }
     }
+
+
+    override suspend fun rejectPostulant(
+        workerId: String,
+        jobId: String,
+        reason: String?
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val postulacion = client.postgrest.from("postulaciones")
+                .select {
+                    filter {
+                        eq("worker_id", workerId)
+                        eq("job_id", jobId)
+                    }
+                }.decodeList<JsonObject>()
+            if (postulacion.isEmpty()) {
+                return@withContext Result.failure(
+                    Exception("no_disponible")
+                )
+            }
+            val updateData = if (!reason.isNullOrBlank()) {
+                mapOf(
+                    "status" to "rechazado",
+                    "rejection_reason" to reason
+                )
+            } else {
+                mapOf(
+                    "status" to "rechazado"
+                )
+            }
+            client.postgrest.from("postulaciones")
+                .update(updateData) {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("worker_id", workerId)
+                    }
+                }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(Exception("Error de servidor: ${e.localizedMessage}"))
+        }
+    }
+
 }

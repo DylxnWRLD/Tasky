@@ -7,7 +7,12 @@ import com.example.tasky.domain.repository.JobRepository
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
 import com.example.tasky.domain.usecase.CancelApplicationUseCase
 import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonObject
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -50,6 +55,36 @@ class JobDetailViewModel(
                     isLoading = false,
                     errorMessage = "Error: ${error.localizedMessage}"
                 )
+            }
+        }
+    }
+
+    // --- NUEVA FUNCIÓN SECUNDARIA INTEGRADA CORRECTAMENTE ---
+    fun checkRejectionStatus(jobId: String) {
+        viewModelScope.launch {
+            val userId = currentUserId ?: SupabaseClient.client.auth.currentUserOrNull()?.id
+            if (userId != null) {
+                try {
+                    val postulation = withContext(Dispatchers.IO) {
+                        SupabaseClient.client.postgrest.from("postulaciones")
+                            .select(Columns.list("status")) {
+                                filter {
+                                    eq("job_id", jobId)
+                                    eq("worker_id", userId)
+                                }
+                            }.decodeList<JsonObject>()
+                    }
+
+                    val statusActual = postulation.firstOrNull()?.get("status")
+                        ?.toString()?.replace("\"", "")
+
+                    // Si en Supabase el estatus es rechazado, prendemos el estado para pintar la Card roja
+                    if (statusActual == "rechazado") {
+                        state = state.copy(isCurrentWorkerRejected = true)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
     }
@@ -168,7 +203,7 @@ class JobDetailViewModel(
         viewModelScope.launch {
             repository.deleteJob(jobId).onSuccess {
                 state = state.copy(isActionLoading = false)
-                onSuccess() // Manda la señal de éxito a la vista
+                onSuccess()
             }.onFailure { error ->
                 state = state.copy(
                     isActionLoading = false,

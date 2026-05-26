@@ -39,6 +39,7 @@ fun JobDetailScreen(
 
     LaunchedEffect(key1 = jobId) {
         viewModel.loadJobById(jobId)
+        viewModel.checkRejectionStatus(jobId)
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF7B8EDB))) {
@@ -197,7 +198,7 @@ fun JobDetailScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(32.dp))
+                        Spacer(Modifier.height(32.dp))
 
                         // BOTONES DE ACCIÓN
                         val currentUserId = SupabaseClient.client.auth.currentUserOrNull()?.id
@@ -233,7 +234,6 @@ fun JobDetailScreen(
 
                                                 Spacer(Modifier.width(4.dp))
 
-                                                // CORRECCIÓN: Botón dinámico para Reabrir el trabajo
                                                 if (state.isActionLoading) {
                                                     CircularProgressIndicator(color = Color(0xFF2E7D32), modifier = Modifier.size(20.dp))
                                                 } else {
@@ -280,40 +280,83 @@ fun JobDetailScreen(
                                 }
                             }
                         } else {
-                            // === VISTA DE LOS POSTULANTES / EXTERNOS ===
+                            // === VISTA DE LOS POSTULANTES / EXTERNOS (CORREGIDO CON PRIORIDADES) ===
                             val isClosed = job.isClosed
                             val amIAccepted = isClosed && job.acceptedWorkerId == currentUserId
 
-                            Button(
-                                onClick = { viewModel.onMainActionClick() },
-                                modifier = Modifier.fillMaxWidth().height(56.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = when {
-                                        amIAccepted -> Color(0xFF2E7D32)
-                                        state.isApplied -> Color.Red
-                                        else -> Color(0xFF7B8EDB)
-                                    },
-                                    disabledContainerColor = when {
-                                        amIAccepted -> Color(0xFF2E7D32)
-                                        else -> Color.Gray
-                                    },
-                                    disabledContentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(16.dp),
-                                enabled = !state.isActionLoading && !state.isLoading && !isClosed
-                            ) {
-                                if (state.isActionLoading) {
-                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                                } else {
-                                    Text(
-                                        text = when {
-                                            amIAccepted -> "¡Fuiste aceptado para el trabajo!"
-                                            isClosed -> "Trabajo ya asignado"
-                                            state.isApplied -> "Cancelar postulación"
-                                            else -> "Postularse al trabajo"
-                                        },
-                                        fontSize = 16.sp, fontWeight = FontWeight.Bold
-                                    )
+                            when {
+                                // 1. MÁXIMA PRIORIDAD: Mostrar la Card roja si el usuario actual fue rechazado
+                                state.isCurrentWorkerRejected -> {
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                                        border = BorderStroke(1.dp, Color(0xFFC62828)),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = "Lo lamentamos",
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFC62828),
+                                                fontSize = 16.sp
+                                            )
+                                            Text(
+                                                text = "No fuiste seleccionado para realizar este trabajo.",
+                                                fontSize = 13.sp,
+                                                color = Color.DarkGray
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // 2. SEGUNDA PRIORIDAD: El usuario actual fue el seleccionado
+                                amIAccepted -> {
+                                    Button(
+                                        onClick = { },
+                                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) {
+                                        Text("¡Fuiste aceptado para el trabajo!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+
+                                // 3. TERCERA PRIORIDAD: La vacante se cerró con otra persona
+                                isClosed -> {
+                                    Button(
+                                        onClick = { },
+                                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
+                                        shape = RoundedCornerShape(16.dp),
+                                        enabled = false
+                                    ) {
+                                        Text("Trabajo ya asignado", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+
+                                // 4. CUARTA PRIORIDAD: Flujo normal (Postularse o Cancelar)
+                                else -> {
+                                    Button(
+                                        onClick = { viewModel.onMainActionClick() },
+                                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (state.isApplied) Color.Red else Color(0xFF7B8EDB)
+                                        ),
+                                        shape = RoundedCornerShape(16.dp),
+                                        enabled = !state.isActionLoading && !state.isLoading
+                                    ) {
+                                        if (state.isActionLoading) {
+                                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                        } else {
+                                            Text(
+                                                text = if (state.isApplied) "Cancelar postulación" else "Postularse al trabajo",
+                                                fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -356,4 +399,11 @@ fun JobDetailScreen(
             }
         }
     }
+}
+
+@Composable
+private fun DetailSection(title: String, content: String) {
+    Text(text = title, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
+    Text(text = content, fontSize = 16.sp)
+    Spacer(modifier = Modifier.height(16.dp))
 }

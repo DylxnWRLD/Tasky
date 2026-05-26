@@ -14,5 +14,6 @@ data class JobDetailState(
     val showConfirmDialog: Boolean = false,
     val userMessage: String? = null,
     val errorMessage: String? = null,
-    val isUserLoggedIn: Boolean = true
+    val isUserLoggedIn: Boolean = true,
+    val isCurrentWorkerRejected: Boolean = false
 )

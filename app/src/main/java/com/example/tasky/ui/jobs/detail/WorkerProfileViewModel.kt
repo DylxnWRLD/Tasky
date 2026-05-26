@@ -9,6 +9,7 @@ import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.model.User
 import com.example.tasky.domain.usecase.GetWorkerProfileUseCase
 import com.example.tasky.domain.usecase.AcceptApplicantUseCase
+import com.example.tasky.domain.usecase.RejectPostulantUseCase
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.Dispatchers
@@ -24,15 +25,18 @@ data class WorkerProfileState(
     val successMessage: String? = null,
     val showConfirmDialog: Boolean = false,
     val isCancelled: Boolean = false,
-
     val isJobClosed: Boolean = false,
-    val isCurrentWorkerAccepted: Boolean = false
+    val isCurrentWorkerAccepted: Boolean = false,
+    val showRejectConfirmDialog: Boolean = false,
+    val showReasonScreen: Boolean = false,
+    val isCurrentWorkerRejected: Boolean = false
 )
 
-class WorkerProfileViewModel (
+class WorkerProfileViewModel(
     private val getWorkerProfileUseCase: GetWorkerProfileUseCase,
-    private val acceptApplicantUseCase: AcceptApplicantUseCase
-): ViewModel() {
+    private val acceptApplicantUseCase: AcceptApplicantUseCase,
+    private val rejectPostulantUseCase: RejectPostulantUseCase
+) : ViewModel() {
 
     var state by mutableStateOf(WorkerProfileState())
         private set
@@ -53,11 +57,12 @@ class WorkerProfileViewModel (
                         worker = worker,
                         isLoading = false,
                         isJobClosed = postulationData.isJobClosed,
-                        isCurrentWorkerAccepted = postulationData.isCurrentWorkerAccepted
+                        isCurrentWorkerAccepted = postulationData.isCurrentWorkerAccepted,
+                        isCurrentWorkerRejected = postulationData.isCurrentWorkerRejected
                     )
                 },
                 onFailure = { error ->
-                    if(error.message?.contains("cancelada") == true) {
+                    if (error.message?.contains("cancelada") == true) {
                         state = state.copy(isCancelled = true, isLoading = false)
                     } else {
                         state = state.copy(error = "Error al cargar el perfil", isLoading = false)
@@ -69,27 +74,36 @@ class WorkerProfileViewModel (
 
     private suspend fun fetchPostulationsStatus(workerId: String, jobId: String): PostulationStatusData = withContext(Dispatchers.IO) {
         try {
-            val acceptedResponse = SupabaseClient.client.postgrest.from("postulaciones")
+            val allPostulations = SupabaseClient.client.postgrest.from("postulaciones")
                 .select(Columns.list("worker_id", "status")) {
                     filter {
                         eq("job_id", jobId)
-                        eq("status", "aceptado")
                     }
                 }.decodeList<JsonObject>()
 
-            val isJobClosed = acceptedResponse.isNotEmpty()
-
-            val isCurrentWorkerAccepted = if (isJobClosed) {
-                val acceptedId = acceptedResponse.firstOrNull()?.get("worker_id")
-                    ?.toString()?.replace("\"", "")
-                acceptedId == workerId
-            } else {
-                false
+            val isJobClosed = allPostulations.any {
+                it["status"]?.toString()?.replace("\"", "") == "aceptado"
             }
 
-            PostulationStatusData(isJobClosed = isJobClosed, isCurrentWorkerAccepted = isCurrentWorkerAccepted)
+            val isCurrentWorkerAccepted = allPostulations.any {
+                val wId = it["worker_id"]?.toString()?.replace("\"", "")
+                val status = it["status"]?.toString()?.replace("\"", "")
+                wId == workerId && status == "aceptado"
+            }
+
+            val isCurrentWorkerRejected = allPostulations.any {
+                val wId = it["worker_id"]?.toString()?.replace("\"", "")
+                val status = it["status"]?.toString()?.replace("\"", "")
+                wId == workerId && status == "rechazado"
+            }
+
+            PostulationStatusData(
+                isJobClosed = isJobClosed,
+                isCurrentWorkerAccepted = isCurrentWorkerAccepted,
+                isCurrentWorkerRejected = isCurrentWorkerRejected
+            )
         } catch (e: Exception) {
-            PostulationStatusData(isJobClosed = false, isCurrentWorkerAccepted = false)
+            PostulationStatusData(isJobClosed = false, isCurrentWorkerAccepted = false, isCurrentWorkerRejected = false)
         }
     }
 
@@ -101,6 +115,7 @@ class WorkerProfileViewModel (
         state = state.copy(showConfirmDialog = false)
     }
 
+    // Caso de uso 19 - Aceptar trabajador
     fun confirmAcceptance(workerId: String, jobId: String) {
         viewModelScope.launch {
             state = state.copy(showConfirmDialog = false, isLoading = true)
@@ -124,12 +139,59 @@ class WorkerProfileViewModel (
         }
     }
 
+    // Caso de uso 20 - Rechazar trabajador
+    fun onRejectClicked() {
+        state = state.copy(showRejectConfirmDialog = true)
+    }
+
+    fun onCancelRejectDialog() {
+        state = state.copy(showRejectConfirmDialog = false)
+    }
+
+    fun onConfirmRejectionClick() {
+        state = state.copy(showRejectConfirmDialog = false, showReasonScreen = true)
+    }
+
+    fun submitRejection(workerId: String, jobId: String, reason: String) {
+        viewModelScope.launch {
+            state = state.copy(isLoading = true)
+
+            val result = rejectPostulantUseCase(
+                workerId = workerId,
+                jobId = jobId,
+                reason = reason.trim()
+            )
+
+            result.onSuccess {
+                state = state.copy(
+                    isLoading = false,
+                    showReasonScreen = false,
+                    successMessage = "Has rechazado a ${state.worker?.name ?: "al postulante"} para tu trabajo"
+                )
+            }.onFailure { error ->
+                if (error.message == "no_disponible") {
+                    state = state.copy(
+                        isLoading = false,
+                        error = "Error: el postulante ya no se encuentra disponible",
+                        isCancelled = true
+                    )
+                } else {
+                    state = state.copy(
+                        isLoading = false,
+                        error = error.message ?: "Error al procesar el rechazo en el servidor"
+                    )
+                }
+            }
+        }
+    }
+
     fun clearMessages() {
         state = state.copy(successMessage = null, error = null)
     }
 
     private data class PostulationStatusData(
         val isJobClosed: Boolean,
-        val isCurrentWorkerAccepted: Boolean
+        val isCurrentWorkerAccepted: Boolean,
+        val isCurrentWorkerRejected: Boolean
     )
 }
