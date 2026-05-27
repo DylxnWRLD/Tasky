@@ -20,7 +20,9 @@ import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
+import java.io.IOException
 
 class JobRepositoryImpl(private val context: Context) : JobRepository {
 
@@ -351,4 +353,26 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
         }
     }
 
+    override suspend fun updateJobStatus(jobId: String, status: String): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val cleanedJobId = jobId.replace("\"", "").trim()
+
+                withTimeout(5000L) {
+                    SupabaseClient.client.postgrest.from("trabajos").update(
+                        mapOf("status" to status)
+                    ) {
+                        filter {
+                            eq("id", cleanedJobId)
+                        }
+                    }
+                }
+                Result.success(Unit)
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                Result.failure(IOException("Tiempo de espera agotado. Sin conexión a internet."))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
 }

@@ -2,7 +2,6 @@ package com.example.tasky.ui.jobs.detail
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -10,7 +9,6 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -101,6 +99,29 @@ fun JobDetailScreen(
                                 Spacer(Modifier.height(4.dp))
                                 Text("Categoría: ${job.category}", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                                 Text("Pago: $${job.payment} MXN", color = Color(0xFF7B8EDB), fontWeight = FontWeight.Bold)
+
+                                // --- CORRECCIÓN INTEGRACIÓN POSTGRES: MAPEO DEL ESTADO ACTUAL CONTRA EL CONSTRAINT ---
+                                val estadoLegible = when (job.status) {
+                                    "abierto" -> "Pendiente"
+                                    "en_progreso" -> "En proceso"
+                                    "completado" -> "Terminado"
+                                    "cancelado" -> "Cancelado"
+                                    else -> job.status ?: "Pendiente"
+                                }
+
+                                Surface(
+                                    color = Color(0xFFE0E4F7),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.padding(top = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Estado: $estadoLegible",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF4A59A1)
+                                    )
+                                }
                             }
                         }
 
@@ -141,7 +162,7 @@ fun JobDetailScreen(
                                         val coords = job.locationApprox.split(",")
                                         GeoPoint(coords[0].toDouble(), coords[1].toDouble())
                                     } catch (e: Exception) {
-                                        GeoPoint(19.5438, -96.9102) // Coordenadas por defecto
+                                        GeoPoint(19.5438, -96.9102)
                                     }
                                 }
 
@@ -280,12 +301,11 @@ fun JobDetailScreen(
                                 }
                             }
                         } else {
-                            // === VISTA DE LOS POSTULANTES / EXTERNOS (CORREGIDO CON PRIORIDADES) ===
+                            // === VISTA DE LOS POSTULANTES / EXTERNOS ===
                             val isClosed = job.isClosed
                             val amIAccepted = isClosed && job.acceptedWorkerId == currentUserId
 
                             when {
-                                // 1. MÁXIMA PRIORIDAD: Mostrar la Card roja si el usuario actual fue rechazado
                                 state.isCurrentWorkerRejected -> {
                                     Card(
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -297,34 +317,48 @@ fun JobDetailScreen(
                                             modifier = Modifier.padding(16.dp),
                                             horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            Text(
-                                                text = "Lo lamentamos",
-                                                fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFC62828),
-                                                fontSize = 16.sp
-                                            )
-                                            Text(
-                                                text = "No fuiste seleccionado para realizar este trabajo.",
-                                                fontSize = 13.sp,
-                                                color = Color.DarkGray
-                                            )
+                                            Text(text = "Lo lamentamos", fontWeight = FontWeight.Bold, color = Color(0xFFC62828), fontSize = 16.sp)
+                                            Text(text = "No fuiste seleccionado para realizar este trabajo.", fontSize = 13.sp, color = Color.DarkGray)
                                         }
                                     }
                                 }
 
-                                // 2. SEGUNDA PRIORIDAD: El usuario actual fue el seleccionado
                                 amIAccepted -> {
-                                    Button(
-                                        onClick = { },
-                                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                                        shape = RoundedCornerShape(16.dp)
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        Text("¡Fuiste aceptado para el trabajo!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Surface(
+                                            color = Color(0xFFE8F5E9),
+                                            shape = RoundedCornerShape(16.dp),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                text = "¡Fuiste aceptado para el trabajo!",
+                                                modifier = Modifier.padding(16.dp),
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF2E7D32),
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                        }
+
+                                        Button(
+                                            onClick = { viewModel.onStatusButtonClick() },
+                                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7B8EDB)),
+                                            shape = RoundedCornerShape(16.dp),
+                                            enabled = !state.isActionLoading
+                                        ) {
+                                            if (state.isActionLoading) {
+                                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                                            } else {
+                                                Text("Cambiar estado", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                            }
+                                        }
                                     }
                                 }
 
-                                // 3. TERCERA PRIORIDAD: La vacante se cerró con otra persona
                                 isClosed -> {
                                     Button(
                                         onClick = { },
@@ -337,7 +371,6 @@ fun JobDetailScreen(
                                     }
                                 }
 
-                                // 4. CUARTA PRIORIDAD: Flujo normal (Postularse o Cancelar)
                                 else -> {
                                     Button(
                                         onClick = { viewModel.onMainActionClick() },
@@ -366,7 +399,44 @@ fun JobDetailScreen(
             }
         }
 
-        // --- DIÁLOGOS DE CONFIRMACIÓN ---
+        // --- CORRECCIÓN INTEGRACIÓN POSTGRES: DIÁLOGO SELECCIÓN DE STATUS HOMOLOGADO ---
+        if (state.showStatusDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.onDismissStatusDialog() },
+                title = { Text("Selecciona el nuevo estado", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Emparejamos el valor real de Postgres con el string amigable
+                        val estadosCompatibles = listOf(
+                            "abierto" to "Pendiente",
+                            "en_progreso" to "En proceso",
+                            "completado" to "Terminado"
+                        )
+
+                        estadosCompatibles.forEach { (valorPostgres, textoVisual) ->
+                            OutlinedButton(
+                                onClick = { viewModel.onStatusSelected(valorPostgres) }, // Enviamos el valor correcto en snake_case
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(textoVisual, fontWeight = FontWeight.Medium, color = Color.Black)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { viewModel.onDismissStatusDialog() }) {
+                        Text("Cancelar", color = Color.Red)
+                    }
+                }
+            )
+        }
+
+        // --- CORRECCIÓN INTEGRACIÓN POSTGRES: DIÁLOGO CONFIRMACIÓN TRADUCIDO ---
         if (state.showConfirmDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.onDismissDialog() },
@@ -376,11 +446,22 @@ fun JobDetailScreen(
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { viewModel.onDismissDialog() }) { Text("Volver") }
+                    TextButton(onClick = { viewModel.onDismissDialog() }) { Text("Cancelar") }
                 },
                 title = { Text("Confirmación") },
                 text = {
-                    Text(if (state.isApplied) "¿Estás seguro de que quieres cancelar tu postulación?" else "¿Quieres postularte para este trabajo?")
+                    val textoDialogo = if (state.selectedStatus != null) {
+                        val nombreBonito = when(state.selectedStatus) {
+                            "abierto" -> "Pendiente"
+                            "en_progreso" -> "En proceso"
+                            "completado" -> "Terminado"
+                            else -> state.selectedStatus
+                        }
+                        "¿Estás seguro de que quieres cambiar el estado a \"$nombreBonito\"?"
+                    } else {
+                        if (state.isApplied) "¿Estás seguro de que quieres cancelar tu postulación?" else "¿Quieres postularte para este trabajo?"
+                    }
+                    Text(textoDialogo)
                 }
             )
         }

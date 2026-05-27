@@ -25,6 +25,7 @@ import com.example.tasky.ui.jobs.detail.JobApplicantsScreen
 import com.example.tasky.ui.jobs.detail.JobApplicantsViewModel
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
 import com.example.tasky.domain.usecase.GetApplicantsUseCase
+import com.example.tasky.domain.usecase.ChangeJobStatusUseCase // 1. NUEVO IMPORT
 import com.example.tasky.data.repository.JobRepositoryImpl
 import com.example.tasky.ui.HomeViewModel
 import com.example.tasky.ui.create.CreateJobScreen
@@ -53,21 +54,17 @@ fun AppNavigation() {
 
     GestorDeSacudidas(
         onShake = {
-            // Se extrae la ruta actual para saber dónde chingados está el usuario
             val rutaActual = navController.currentDestination?.route
-
             val pantallasBloqueadas = listOf("login", "register", "forgot_password", "pantalla_reporte")
 
             if (rutaActual !in pantallasBloqueadas) {
                 val usuarioLogueado = SupabaseClient.client.auth.currentUserOrNull()
-
                 if (usuarioLogueado != null) {
                     navController.navigate("pantalla_reporte")
                 }
             }
         }
     )
-
 
     NavHost(
         navController = navController,
@@ -161,10 +158,17 @@ fun AppNavigation() {
             val jobId = backStackEntry.arguments?.getString("jobId") ?: ""
             val contextoDetalle = LocalContext.current
 
+            // CORREGIDO: Se instancian e inyectan los 3 parámetros necesarios
             val detailViewModel = remember {
                 val repository = JobRepositoryImpl(contextoDetalle)
-                val useCase = ApplyToJobUseCase(repository)
-                JobDetailViewModel(repository, useCase)
+                val applyUC = ApplyToJobUseCase(repository)
+                val changeStatusUC = ChangeJobStatusUseCase(repository) // 2. Instanciamos el UC del CU-21
+
+                JobDetailViewModel(
+                    repository = repository,
+                    applyToJobUseCase = applyUC,
+                    changeJobStatusUseCase = changeStatusUC // 3. Se pasa como tercer parámetro
+                )
             }
 
             JobDetailScreen(
@@ -175,11 +179,11 @@ fun AppNavigation() {
                     navController.navigate("applicants/$id")
                 },
                 onEditClick = {
-                    navController.navigate("edit_job/$jobId") // Brinca a editar
+                    navController.navigate("edit_job/$jobId")
                 },
                 onDeleteSuccess = {
                     Toast.makeText(contextoDetalle, "Tarea Eliminada", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack() // Saca al wey a la pantalla anterior
+                    navController.popBackStack()
                 }
             )
         }
@@ -196,10 +200,9 @@ fun AppNavigation() {
 
             CreateJobScreen(
                 viewModel = createViewModel,
-                jobIdToEdit = jobId, // Se le inyecta el ID para que sepa que es edición
+                jobIdToEdit = jobId,
                 onNavigateBack = { navController.popBackStack() },
                 onJobSaved = { mensajeToast ->
-                    // Se recicla el Toast tanto para creación como para edición
                     Toast.makeText(contexto, mensajeToast, Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }
@@ -247,10 +250,9 @@ fun AppNavigation() {
                 val repository = JobRepositoryImpl(contexto)
                 val getProfileUC = GetWorkerProfileUseCase(repository)
                 val acceptUC = AcceptApplicantUseCase(repository)
-                val rejectUC =
-                    RejectPostulantUseCase(repository)
+                val rejectUC = RejectPostulantUseCase(repository)
 
-                WorkerProfileViewModel(getProfileUC, acceptUC, rejectUC) // <-- Se lo pasamos como tercer parámetro
+                WorkerProfileViewModel(getProfileUC, acceptUC, rejectUC)
             }
 
             WorkerProfileScreen(
@@ -260,7 +262,6 @@ fun AppNavigation() {
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-
 
         composable("home") {
             val contextoHome = LocalContext.current
@@ -284,20 +285,14 @@ fun AppNavigation() {
 
             CreateJobScreen(
                 viewModel = createViewModel,
-                jobIdToEdit = null, // Se indica nulo al tratarse de una creación
+                jobIdToEdit = null,
                 onNavigateBack = { navController.popBackStack() },
                 onJobSaved = { mensaje ->
-                    // Se lanza el madrazo visual y se regresa a la pantalla anterior
-                    Toast.makeText(
-                        contexto,
-                        mensaje,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(contexto, mensaje, Toast.LENGTH_SHORT).show()
                     navController.popBackStack()
                 }
             )
         }
-
 
         composable("profile") {
             val contexto = LocalContext.current
@@ -328,16 +323,11 @@ fun AppNavigation() {
                 Toast.makeText(contexto, "Foto de perfil actualizada", Toast.LENGTH_SHORT).show()
             }
 
-
             UserProfileRoute(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onEditProfile = {
-                    viewModel.toggleEditing()
-                },
-                onJobClick = { jobId ->
-                    navController.navigate("job_detail/$jobId")
-                }
+                onEditProfile = { viewModel.toggleEditing() },
+                onJobClick = { jobId -> navController.navigate("job_detail/$jobId") }
             )
         }
 
@@ -345,7 +335,6 @@ fun AppNavigation() {
         composable("pantalla_reporte") {
             val contexto = LocalContext.current
             val scope = rememberCoroutineScope()
-
             val jobRepository = remember { JobRepositoryImpl(contexto) }
 
             ReportScreen(
@@ -354,7 +343,6 @@ fun AppNavigation() {
                     scope.launch {
                         try {
                             val user = SupabaseClient.client.auth.currentUserOrNull()
-
                             if (user != null) {
                                 jobRepository.enviarReporte(user.id, textoReporte)
                                 Toast.makeText(contexto, "Reporte enviado exitosamente", Toast.LENGTH_SHORT).show()
@@ -364,7 +352,6 @@ fun AppNavigation() {
                         } catch (e: Exception) {
                             Toast.makeText(contexto, "Error en el reporte: ${e.message}", Toast.LENGTH_SHORT).show()
                         } finally {
-                            // Se saca al usuario de la pantalla de reportes a huevo
                             navController.popBackStack()
                         }
                     }

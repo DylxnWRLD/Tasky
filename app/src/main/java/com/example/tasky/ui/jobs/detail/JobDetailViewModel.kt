@@ -6,6 +6,7 @@ import com.example.tasky.data.remote.SupabaseClient
 import com.example.tasky.domain.repository.JobRepository
 import com.example.tasky.domain.usecase.ApplyToJobUseCase
 import com.example.tasky.domain.usecase.CancelApplicationUseCase
+import com.example.tasky.domain.usecase.ChangeJobStatusUseCase
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
@@ -13,12 +14,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 
 class JobDetailViewModel(
     private val repository: JobRepository,
     private val applyToJobUseCase: ApplyToJobUseCase,
+    private val changeJobStatusUseCase: ChangeJobStatusUseCase,
     private val currentUserId: String? = SupabaseClient.client.auth.currentUserOrNull()?.id
 ) : ViewModel() {
 
@@ -59,7 +62,6 @@ class JobDetailViewModel(
         }
     }
 
-    // --- NUEVA FUNCIÓN SECUNDARIA INTEGRADA CORRECTAMENTE ---
     fun checkRejectionStatus(jobId: String) {
         viewModelScope.launch {
             val userId = currentUserId ?: SupabaseClient.client.auth.currentUserOrNull()?.id
@@ -78,7 +80,6 @@ class JobDetailViewModel(
                     val statusActual = postulation.firstOrNull()?.get("status")
                         ?.toString()?.replace("\"", "")
 
-                    // Si en Supabase el estatus es rechazado, prendemos el estado para pintar la Card roja
                     if (statusActual == "rechazado") {
                         state = state.copy(isCurrentWorkerRejected = true)
                     }
@@ -89,6 +90,57 @@ class JobDetailViewModel(
         }
     }
 
+    // --- NUEVAS FUNCIONES DE CONTROL PARA EL CU-21 ---
+
+    fun onStatusButtonClick() {
+        state = state.copy(showStatusDialog = true)
+    }
+
+    fun onStatusSelected(status: String) {
+        state = state.copy(
+            showStatusDialog = false,
+            selectedStatus = status,
+            showConfirmDialog = true // Desencadena el diálogo de confirmación textual
+        )
+    }
+
+    fun onDismissStatusDialog() {
+        state = state.copy(showStatusDialog = false)
+    }
+
+    private suspend fun executeStatusChange(jobId: String, newStatus: String) {
+        try {
+            val result = changeJobStatusUseCase(jobId, newStatus)
+            if (result.isSuccess) {
+                state = state.copy(
+                    isActionLoading = false,
+                    job = state.job?.copy(status = newStatus),
+                    selectedStatus = null,
+                    userMessage = "El estado ha sido cambiado a $newStatus"
+                )
+            } else {
+                state = state.copy(
+                    isActionLoading = false,
+                    selectedStatus = null,
+                    userMessage = "Error: no se ha podido cambiar el estado del trabajo."
+                )
+            }
+        } catch (e: IOException) {
+            state = state.copy(
+                isActionLoading = false,
+                selectedStatus = null,
+                userMessage = "Error al cambiar de estado: Sin conexión a internet."
+            )
+        } catch (e: Exception) {
+            state = state.copy(
+                isActionLoading = false,
+                selectedStatus = null,
+                userMessage = "Error inesperado al cambiar el estado."
+            )
+        }
+    }
+
+    // --- MÉTODOS DE FLUJO MODIFICADOS Y EXISTENTES ---
     private fun checkCancelApplication(): CancelResult {
         val job = state.job ?: return CancelResult.ALREADY_STARTED
 
@@ -143,7 +195,10 @@ class JobDetailViewModel(
     }
 
     fun onDismissDialog() {
-        state = state.copy(showConfirmDialog = false)
+        state = state.copy(
+            showConfirmDialog = false,
+            selectedStatus = null
+        )
     }
 
     fun confirmAction() {
@@ -155,10 +210,15 @@ class JobDetailViewModel(
         )
 
         viewModelScope.launch {
-            if (state.isApplied) {
-                executeCancel(jobId)
+            val statusAEnviar = state.selectedStatus
+            if (statusAEnviar != null) {
+                executeStatusChange(jobId, statusAEnviar)
             } else {
-                executeApply(jobId)
+                if (state.isApplied) {
+                    executeCancel(jobId)
+                } else {
+                    executeApply(jobId)
+                }
             }
         }
     }
@@ -197,7 +257,6 @@ class JobDetailViewModel(
 
     fun eliminarChamba(onSuccess: () -> Unit) {
         val jobId = state.job?.id ?: return
-
         state = state.copy(isActionLoading = true)
 
         viewModelScope.launch {
@@ -220,7 +279,6 @@ class JobDetailViewModel(
     fun liberarTrabajo() {
         val jobId = state.job?.id ?: return
         val workerId = state.job?.acceptedWorkerId ?: return
-
         state = state.copy(isActionLoading = true)
 
         viewModelScope.launch {

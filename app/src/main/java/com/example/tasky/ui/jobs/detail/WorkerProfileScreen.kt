@@ -226,7 +226,7 @@ fun WorkerProfileScreen(
                                     Row {
                                         repeat(5) { index ->
                                             Text(
-                                                text = if (index < worker.rating.toInt()) "⭐" else "☆",
+                                                text = if (index < worker.rating.toInt()) "⭐" else "☆ ",
                                                 fontSize = 20.sp
                                             )
                                         }

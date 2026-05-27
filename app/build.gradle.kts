@@ -87,6 +87,7 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.4.0")
     implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation("io.ktor:ktor-client-android:2.3.11")
 
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.material3)
