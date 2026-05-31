@@ -32,7 +32,7 @@ class AuthRepositoryImpl : AuthRepository {
                 Result.success(result.first().email)
             }
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error buscando email por username -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error buscando email por username -> ${e.localizedMessage}")
             Result.failure(Exception("Error al buscar el usuario. Verifica el nombre ingresado."))
         }
     }
@@ -57,7 +57,7 @@ class AuthRepositoryImpl : AuthRepository {
                     return Result.failure(Exception("Ya existe un usuario con el nombre '$name'. Por favor elige otro nombre."))
                 }
             } catch (e: Exception) {
-                println("DEBUG_TASKY: Aviso verificando nombre duplicado -> ${e.localizedMessage}")
+                //println("DEBUG_TASKY: Aviso verificando nombre duplicado -> ${e.localizedMessage}")
             }
 
             // Registrar usuario en Auth
@@ -69,11 +69,11 @@ class AuthRepositoryImpl : AuthRepository {
             // Obtener el ID del usuario recién creado
             val userId = supabase.auth.currentUserOrNull()?.id
             if (userId == null) {
-                println("DEBUG_TASKY: No se pudo obtener el ID del usuario después del registro")
+                //println("DEBUG_TASKY: No se pudo obtener el ID del usuario después del registro")
                 return Result.failure(Exception("Error al obtener el ID del usuario"))
             }
 
-            println("DEBUG_TASKY: Usuario registrado con ID: $userId")
+            //println("DEBUG_TASKY: Usuario registrado con ID: $userId")
 
             try {
                 supabase.from("users").update(
@@ -84,9 +84,9 @@ class AuthRepositoryImpl : AuthRepository {
                 ) {
                     filter { eq("id", userId) }
                 }
-                println("DEBUG_TASKY: Usuario actualizado exitosamente")
+                //println("DEBUG_TASKY: Usuario actualizado exitosamente")
             } catch (e: Exception) {
-                println("DEBUG_TASKY: Error actualizando usuario -> ${e.localizedMessage}")
+                //println("DEBUG_TASKY: Error actualizando usuario -> ${e.localizedMessage}")
                 // Intentar insertar si update falla
                 try {
                     supabase.from("users").insert(
@@ -97,16 +97,16 @@ class AuthRepositoryImpl : AuthRepository {
                             "role" to role
                         )
                     )
-                    println("DEBUG_TASKY: Usuario insertado exitosamente")
+                    //println("DEBUG_TASKY: Usuario insertado exitosamente")
                 } catch (insertError: Exception) {
-                    println("DEBUG_TASKY: Error insertando usuario -> ${insertError.localizedMessage}")
+                    //println("DEBUG_TASKY: Error insertando usuario -> ${insertError.localizedMessage}")
                     return Result.failure(Exception("Error al crear el perfil de usuario"))
                 }
             }
 
             Result.success(Unit)
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error en registro -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error en registro -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }
@@ -115,8 +115,6 @@ class AuthRepositoryImpl : AuthRepository {
         email: String,
         password: String
     ): Result<User> {
-        println("TASKY_LOG: Email:|${email}|")
-        println("TASKY_LOG: Pass:|${password}|")
         return try {
             supabase.auth.signInWith(Email) {
                 this.email = email.trim()
@@ -136,7 +134,7 @@ class AuthRepositoryImpl : AuthRepository {
             Result.success(user)
 
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error detallado -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error detallado -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }
@@ -155,7 +153,7 @@ class AuthRepositoryImpl : AuthRepository {
 
             Result.success(user)
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error obteniendo usuario actual -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error obteniendo usuario actual -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }

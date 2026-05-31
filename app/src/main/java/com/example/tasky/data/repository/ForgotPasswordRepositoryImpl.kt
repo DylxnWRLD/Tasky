@@ -13,10 +13,10 @@ class ForgotPasswordRepositoryImpl : ForgotPasswordRepository {
     override suspend fun resetPasswordForEmail(email: String): Result<Unit> {
         return try {
             supabase.auth.resetPasswordForEmail(email.trim())
-            println("DEBUG_TASKY: Código enviado exitosamente a $email")
+            //println("DEBUG_TASKY: Código enviado exitosamente a $email")
             Result.success(Unit)
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error enviando código -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error enviando código -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }
@@ -29,10 +29,10 @@ class ForgotPasswordRepositoryImpl : ForgotPasswordRepository {
                 token = otp.trim(),
                 type = OtpType.Email.RECOVERY
             )
-            println("DEBUG_TASKY: OTP verificado exitosamente")
+            //println("DEBUG_TASKY: OTP verificado exitosamente")
             Result.success(Unit)
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error verificando OTP -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error verificando OTP -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }
@@ -42,14 +42,14 @@ class ForgotPasswordRepositoryImpl : ForgotPasswordRepository {
             supabase.auth.updateUser {
                 password = newPassword.trim()
             }
-            println("DEBUG_TASKY: Contraseña actualizada exitosamente")
+            //println("DEBUG_TASKY: Contraseña actualizada exitosamente")
 
             supabase.auth.signOut()
-            println("DEBUG_TASKY: Sesión cerrada después de actualizar contraseña")
+            //println("DEBUG_TASKY: Sesión cerrada después de actualizar contraseña")
 
             Result.success(Unit)
         } catch (e: Exception) {
-            println("DEBUG_TASKY: Error actualizando contraseña -> ${e.localizedMessage}")
+            //println("DEBUG_TASKY: Error actualizando contraseña -> ${e.localizedMessage}")
             Result.failure(e)
         }
     }

@@ -8,7 +8,7 @@ import io.github.jan.supabase.storage.Storage
 
 object SupabaseClient {
     init {
-        println("TASKY_AUTH: URL de la App -> ${BuildConfig.SUPABASE_URL}")
+        //println("TASKY_AUTH: URL de la App -> ${BuildConfig.SUPABASE_URL}")
     }
 
     val client = createSupabaseClient(
