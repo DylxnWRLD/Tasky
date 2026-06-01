@@ -281,18 +281,55 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
         }
     }
 
-    override suspend fun acceptApplicant(workerId: String, jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun acceptApplicant(
+        workerId: String,
+        jobId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val response = client.postgrest.from("postulaciones")
+            val acceptedPostulations = client.postgrest.from("postulaciones")
+                .select {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("status", "aceptado")
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            if (acceptedPostulations.isNotEmpty()) {
+                return@withContext Result.failure(
+                    Exception("Error: el trabajo ya fue asignado")
+                )
+            }
+
+            val currentPostulation = client.postgrest.from("postulaciones")
+                .select {
+                    filter {
+                        eq("job_id", jobId)
+                        eq("worker_id", workerId)
+                    }
+                }
+                .decodeList<JsonObject>()
+
+            if (currentPostulation.isEmpty()) {
+                return@withContext Result.failure(
+                    Exception("Error: el postulante ya no se encuentra disponible")
+                )
+            }
+
+            client.postgrest.from("postulaciones")
                 .update(mapOf("status" to "aceptado")) {
                     filter {
                         eq("job_id", jobId)
                         eq("worker_id", workerId)
                     }
                 }
+
             Result.success(Unit)
+
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(
+                Exception("Error al cargar los postulantes")
+            )
         }
     }
 
@@ -334,12 +371,15 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                         eq("worker_id", workerId)
                         eq("job_id", jobId)
                     }
-                }.decodeList<JsonObject>()
+                }
+                .decodeList<JsonObject>()
+
             if (postulacion.isEmpty()) {
                 return@withContext Result.failure(
                     Exception("no_disponible")
                 )
             }
+
             val updateData = if (!reason.isNullOrBlank()) {
                 mapOf(
                     "status" to "rechazado",
@@ -350,6 +390,7 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                     "status" to "rechazado"
                 )
             }
+
             client.postgrest.from("postulaciones")
                 .update(updateData) {
                     filter {
@@ -357,9 +398,13 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                         eq("worker_id", workerId)
                     }
                 }
+
             Result.success(Unit)
+
         } catch (e: Exception) {
-            Result.failure(Exception("Error de servidor: ${e.localizedMessage}"))
+            Result.failure(
+                Exception("Error al procesar el rechazo en el servidor")
+            )
         }
     }
 
@@ -377,11 +422,13 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                         }
                     }
                 }
+
                 Result.success(Unit)
-            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                Result.failure(IOException("Tiempo de espera agotado. Sin conexión a internet."))
+
             } catch (e: Exception) {
-                Result.failure(e)
+                Result.failure(
+                    Exception("Error: no se ha podido cambiar el estado del trabajo")
+                )
             }
         }
     }

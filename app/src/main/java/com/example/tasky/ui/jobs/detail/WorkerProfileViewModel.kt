@@ -156,7 +156,7 @@ class WorkerProfileViewModel(
                 onFailure = { error ->
                     state = state.copy(
                         isLoading = false,
-                        error = error.message ?: "Error: el postulante ya no se encuentra disponible"
+                        error = error.message ?: "Error al cargar los postulantes"
                     )
                 }
             )

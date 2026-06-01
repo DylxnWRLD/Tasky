@@ -110,35 +110,30 @@ class JobDetailViewModel(
     }
 
     private suspend fun executeStatusChange(jobId: String, newStatus: String) {
-        try {
-            val result = changeJobStatusUseCase(jobId, newStatus)
+        val result = changeJobStatusUseCase(jobId, newStatus)
 
-            if (result.isSuccess) {
-                state = state.copy(
-                    isActionLoading = false,
-                    job = state.job?.copy(status = newStatus),
-                    selectedStatus = null,
-                    userMessage = "El estado ha sido cambiado a $newStatus"
-                )
-            } else {
-                state = state.copy(
-                    isActionLoading = false,
-                    selectedStatus = null,
-                    userMessage = "Error: no se ha podido cambiar el estado del trabajo."
-                )
-            }
-        } catch (e: IOException) {
+        result.onSuccess {
+            state = state.copy(
+                isActionLoading = false,
+                job = state.job?.copy(status = newStatus),
+                selectedStatus = null,
+                userMessage = "El estado ha sido cambiado a ${getStatusDisplayName(newStatus)}"
+            )
+        }.onFailure { error ->
             state = state.copy(
                 isActionLoading = false,
                 selectedStatus = null,
-                userMessage = "Error al cambiar de estado: Sin conexión a internet."
+                userMessage = error.message ?: "Error: no se ha podido cambiar el estado del trabajo"
             )
-        } catch (e: Exception) {
-            state = state.copy(
-                isActionLoading = false,
-                selectedStatus = null,
-                userMessage = "Error inesperado al cambiar el estado."
-            )
+        }
+    }
+
+    private fun getStatusDisplayName(status: String): String {
+        return when (status) {
+            "abierto" -> "Pendiente"
+            "en_progreso" -> "En proceso"
+            "completado" -> "Terminado"
+            else -> status
         }
     }
 
@@ -179,7 +174,8 @@ class JobDetailViewModel(
 
                     CancelResult.LESS_THAN_60_MIN -> {
                         state = state.copy(
-                            userMessage = "No puedes cancelar, faltan menos de 60 minutos."
+                            userMessage = "Error: No es posible cancelar la solicitud con " +
+                                    "menos de una hora de anticipación"
                         )
                     }
 
@@ -248,12 +244,12 @@ class JobDetailViewModel(
                 isActionLoading = false,
                 isApplied = false,
                 job = state.job?.copy(isApplied = false),
-                userMessage = "Postulación cancelada con éxito."
+                userMessage = "Listo, tu postulación ha sido cancelada"
             )
-        }.onFailure {
+        }.onFailure { error ->
             state = state.copy(
                 isActionLoading = false,
-                userMessage = "No se pudo cancelar."
+                userMessage = error.message ?: "No se pudo cancelar."
             )
         }
     }
