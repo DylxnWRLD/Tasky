@@ -43,7 +43,12 @@ class WorkerProfileViewModel(
 
     fun loadProfile(workerId: String, jobId: String) {
         viewModelScope.launch {
-            state = state.copy(isLoading = true, error = null)
+            state = state.copy(
+                isLoading = true,
+                error = null,
+                successMessage = null,
+                isCancelled = false
+            )
 
             val profileDeferred = async { getWorkerProfileUseCase(workerId, jobId) }
             val postulationsDeferred = async { fetchPostulationsStatus(workerId, jobId) }
@@ -62,17 +67,27 @@ class WorkerProfileViewModel(
                     )
                 },
                 onFailure = { error ->
-                    if (error.message?.contains("cancelada") == true) {
-                        state = state.copy(isCancelled = true, isLoading = false)
+                    if (error.message == "postulacion_cancelada") {
+                        state = state.copy(
+                            isCancelled = true,
+                            error = "Este trabajador ha cancelado su postulación",
+                            isLoading = false
+                        )
                     } else {
-                        state = state.copy(error = "Error al cargar el perfil", isLoading = false)
+                        state = state.copy(
+                            error = error.message ?: "Error al cargar el perfil del trabajador",
+                            isLoading = false
+                        )
                     }
                 }
             )
         }
     }
 
-    private suspend fun fetchPostulationsStatus(workerId: String, jobId: String): PostulationStatusData = withContext(Dispatchers.IO) {
+    private suspend fun fetchPostulationsStatus(
+        workerId: String,
+        jobId: String
+    ): PostulationStatusData = withContext(Dispatchers.IO) {
         try {
             val allPostulations = SupabaseClient.client.postgrest.from("postulaciones")
                 .select(Columns.list("worker_id", "status")) {
@@ -103,7 +118,11 @@ class WorkerProfileViewModel(
                 isCurrentWorkerRejected = isCurrentWorkerRejected
             )
         } catch (e: Exception) {
-            PostulationStatusData(isJobClosed = false, isCurrentWorkerAccepted = false, isCurrentWorkerRejected = false)
+            PostulationStatusData(
+                isJobClosed = false,
+                isCurrentWorkerAccepted = false,
+                isCurrentWorkerRejected = false
+            )
         }
     }
 
@@ -118,7 +137,12 @@ class WorkerProfileViewModel(
     // Caso de uso 19 - Aceptar trabajador
     fun confirmAcceptance(workerId: String, jobId: String) {
         viewModelScope.launch {
-            state = state.copy(showConfirmDialog = false, isLoading = true)
+            state = state.copy(
+                showConfirmDialog = false,
+                isLoading = true,
+                error = null,
+                successMessage = null
+            )
 
             acceptApplicantUseCase(workerId, jobId).fold(
                 onSuccess = {
@@ -129,10 +153,10 @@ class WorkerProfileViewModel(
                         successMessage = "Has aceptado a ${state.worker?.name} para tu trabajo"
                     )
                 },
-                onFailure = {
+                onFailure = { error ->
                     state = state.copy(
                         isLoading = false,
-                        error = "Error: el postulante ya no se encuentra disponible"
+                        error = error.message ?: "Error: el postulante ya no se encuentra disponible"
                     )
                 }
             )
@@ -149,12 +173,19 @@ class WorkerProfileViewModel(
     }
 
     fun onConfirmRejectionClick() {
-        state = state.copy(showRejectConfirmDialog = false, showReasonScreen = true)
+        state = state.copy(
+            showRejectConfirmDialog = false,
+            showReasonScreen = true
+        )
     }
 
     fun submitRejection(workerId: String, jobId: String, reason: String) {
         viewModelScope.launch {
-            state = state.copy(isLoading = true)
+            state = state.copy(
+                isLoading = true,
+                error = null,
+                successMessage = null
+            )
 
             val result = rejectPostulantUseCase(
                 workerId = workerId,
@@ -186,7 +217,10 @@ class WorkerProfileViewModel(
     }
 
     fun clearMessages() {
-        state = state.copy(successMessage = null, error = null)
+        state = state.copy(
+            successMessage = null,
+            error = null
+        )
     }
 
     private data class PostulationStatusData(

@@ -65,6 +65,7 @@ class JobDetailViewModel(
     fun checkRejectionStatus(jobId: String) {
         viewModelScope.launch {
             val userId = currentUserId ?: SupabaseClient.client.auth.currentUserOrNull()?.id
+
             if (userId != null) {
                 try {
                     val postulation = withContext(Dispatchers.IO) {
@@ -78,7 +79,8 @@ class JobDetailViewModel(
                     }
 
                     val statusActual = postulation.firstOrNull()?.get("status")
-                        ?.toString()?.replace("\"", "")
+                        ?.toString()
+                        ?.replace("\"", "")
 
                     if (statusActual == "rechazado") {
                         state = state.copy(isCurrentWorkerRejected = true)
@@ -90,8 +92,7 @@ class JobDetailViewModel(
         }
     }
 
-    // --- NUEVAS FUNCIONES DE CONTROL PARA EL CU-21 ---
-
+    // Caso de uso 21 - Cambiar estado del trabajo
     fun onStatusButtonClick() {
         state = state.copy(showStatusDialog = true)
     }
@@ -100,7 +101,7 @@ class JobDetailViewModel(
         state = state.copy(
             showStatusDialog = false,
             selectedStatus = status,
-            showConfirmDialog = true // Desencadena el diálogo de confirmación textual
+            showConfirmDialog = true
         )
     }
 
@@ -111,6 +112,7 @@ class JobDetailViewModel(
     private suspend fun executeStatusChange(jobId: String, newStatus: String) {
         try {
             val result = changeJobStatusUseCase(jobId, newStatus)
+
             if (result.isSuccess) {
                 state = state.copy(
                     isActionLoading = false,
@@ -140,7 +142,6 @@ class JobDetailViewModel(
         }
     }
 
-    // --- MÉTODOS DE FLUJO MODIFICADOS Y EXISTENTES ---
     private fun checkCancelApplication(): CancelResult {
         val job = state.job ?: return CancelResult.ALREADY_STARTED
 
@@ -156,7 +157,6 @@ class JobDetailViewModel(
                 diffInMinutes < 60 -> CancelResult.LESS_THAN_60_MIN
                 else -> CancelResult.CAN_CANCEL
             }
-
         } catch (e: Exception) {
             e.printStackTrace()
             CancelResult.ALREADY_STARTED
@@ -176,11 +176,13 @@ class JobDetailViewModel(
                     CancelResult.CAN_CANCEL -> {
                         state = state.copy(showConfirmDialog = true)
                     }
+
                     CancelResult.LESS_THAN_60_MIN -> {
                         state = state.copy(
                             userMessage = "No puedes cancelar, faltan menos de 60 minutos."
                         )
                     }
+
                     CancelResult.ALREADY_STARTED -> {
                         state = state.copy(
                             userMessage = "Este trabajo ya comenzó o ya pasó."
@@ -188,7 +190,6 @@ class JobDetailViewModel(
                     }
                 }
             }
-
         } else {
             state = state.copy(showConfirmDialog = true)
         }
@@ -211,6 +212,7 @@ class JobDetailViewModel(
 
         viewModelScope.launch {
             val statusAEnviar = state.selectedStatus
+
             if (statusAEnviar != null) {
                 executeStatusChange(jobId, statusAEnviar)
             } else {
@@ -223,18 +225,19 @@ class JobDetailViewModel(
         }
     }
 
+    // Caso de uso 17 - Postularse a un trabajo
     private suspend fun executeApply(jobId: String) {
         applyToJobUseCase(jobId).onSuccess {
             state = state.copy(
                 isActionLoading = false,
                 isApplied = true,
                 job = state.job?.copy(isApplied = true),
-                userMessage = "¡Listo! Te has postulado."
+                userMessage = "Listo, te has postulado para este trabajo. La solicitud se encuentra en revisión"
             )
-        }.onFailure {
+        }.onFailure { error ->
             state = state.copy(
                 isActionLoading = false,
-                userMessage = "Error al postularse."
+                userMessage = error.message ?: "Error: el trabajo ya no se encuentra disponible"
             )
         }
     }
@@ -279,6 +282,7 @@ class JobDetailViewModel(
     fun liberarTrabajo() {
         val jobId = state.job?.id ?: return
         val workerId = state.job?.acceptedWorkerId ?: return
+
         state = state.copy(isActionLoading = true)
 
         viewModelScope.launch {

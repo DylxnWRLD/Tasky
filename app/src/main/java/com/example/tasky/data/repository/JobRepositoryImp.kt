@@ -53,7 +53,7 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
 
             Result.success(sortedApplicants)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Error al cargar los postulantes"))
         }
     }
 
@@ -63,7 +63,6 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
     ): Result<User> = withContext(Dispatchers.IO) {
 
         try {
-
             val postulacion = client.postgrest.from("postulaciones")
                 .select {
                     filter {
@@ -75,7 +74,7 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
 
             if (postulacion.isEmpty()) {
                 return@withContext Result.failure(
-                    Exception("cancelada")
+                    Exception("postulacion_cancelada")
                 )
             }
 
@@ -90,14 +89,17 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
             Result.success(userDto.toDomain())
 
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Error al cargar el perfil del trabajador"))
         }
     }
+
 
     override suspend fun applyToJob(jobId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val userId = client.auth.currentUserOrNull()?.id
-                ?: return@withContext Result.failure(Exception("Usuario no autenticado"))
+                ?: return@withContext Result.failure(
+                    Exception("Usuario no autenticado")
+                )
 
             val checkAccepted = client.postgrest.from("postulaciones")
                 .select {
@@ -105,21 +107,29 @@ class JobRepositoryImpl(private val context: Context) : JobRepository {
                         eq("job_id", jobId)
                         eq("status", "aceptado")
                     }
-                }.decodeList<ApplicationDto>()
+                }
+                .decodeList<ApplicationDto>()
 
             if (checkAccepted.isNotEmpty()) {
-                return@withContext Result.failure(Exception("Este trabajo ya no acepta más postulaciones."))
+                return@withContext Result.failure(
+                    Exception("Error: el trabajo ya no se encuentra disponible")
+                )
             }
 
-            client.postgrest.from("postulaciones").insert(mapOf(
-                "job_id" to jobId,
-                "worker_id" to userId,
-                "status" to "pendiente"
-            ))
+            client.postgrest.from("postulaciones").insert(
+                mapOf(
+                    "job_id" to jobId,
+                    "worker_id" to userId,
+                    "status" to "pendiente"
+                )
+            )
 
             Result.success(Unit)
+
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(
+                Exception("Error: el trabajo ya no se encuentra disponible")
+            )
         }
     }
 
