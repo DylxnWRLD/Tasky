@@ -43,6 +43,8 @@ import com.example.tasky.domain.usecase.GetUserProfileUseCase
 import com.example.tasky.domain.usecase.GetWorkerProfileUseCase
 import com.example.tasky.domain.usecase.RejectPostulantUseCase
 import com.example.tasky.domain.usecase.UpdateUserProfileUseCase
+import com.example.tasky.ui.profile.UserJobsScreen
+import com.example.tasky.ui.profile.UserJobsViewModel
 import com.example.tasky.ui.report.ReportScreen
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
@@ -307,7 +309,7 @@ fun AppNavigation() {
                     getUserProfileUseCase = getProfileUseCase,
                     jobRepository = jobRepository,
                     updateUserProfileUseCase = updateProfileUseCase,
-                    userRepository = userRepository
+                    userRepository = userRepository,
                 )
             }
 
@@ -327,6 +329,19 @@ fun AppNavigation() {
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onEditProfile = { viewModel.toggleEditing() },
+                onJobClick = { jobId -> navController.navigate("job_detail/$jobId") },
+                onViewAllJobsClick = { navController.navigate("user_jobs") }
+            )
+        }
+
+        // Lista de todos los trabajos
+        composable("user_jobs") {
+            val contexto = LocalContext.current
+            val userJobsViewModel = remember { UserJobsViewModel(JobRepositoryImpl(contexto)) }
+
+            UserJobsScreen(
+                viewModel = userJobsViewModel,
+                onNavigateBack = { navController.popBackStack() },
                 onJobClick = { jobId -> navController.navigate("job_detail/$jobId") }
             )
         }

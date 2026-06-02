@@ -22,7 +22,7 @@ fun GestorDeSacudidas(onShake: () -> Unit) {
         var ultimoY = 0f
         var ultimoZ = 0f
 
-        val umbralSacudida = 1000
+        val umbralSacudida = 3000 // ESTA ES LA SENSIBILIDAD DEL ACELEROMETRO
 
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {

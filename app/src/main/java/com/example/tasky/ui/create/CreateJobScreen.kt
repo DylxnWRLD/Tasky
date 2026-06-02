@@ -172,7 +172,11 @@ fun CreateJobScreen(
                             isError = titleError,
                             supportingText = { if (titleError) Text("Ponle un título") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF1A1A1A),
+                                unfocusedTextColor = Color(0xFF1A1A1A)
+                            )
                         )
 
                         // 3. Categoría (Combo Box)
@@ -187,7 +191,11 @@ fun CreateJobScreen(
                                 label = { Text("Categoría") },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color(0xFF1A1A1A),
+                                    unfocusedTextColor = Color(0xFF1A1A1A)
+                                )
                             )
                             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                                 categorias.forEach { item ->
@@ -208,7 +216,11 @@ fun CreateJobScreen(
                             supportingText = { if (paymentError) Text("Pon una cantidad válida") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            prefix = { Text("$ ") }
+                            prefix = { Text("$ ") },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF1A1A1A),
+                                unfocusedTextColor = Color(0xFF1A1A1A)
+                            )
                         )
 
                         // 5. Mapa (Ubicación exacta)
@@ -265,7 +277,11 @@ fun CreateJobScreen(
                             supportingText = { if (descError) Text("Escribe de qué trata la chamba") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
-                            minLines = 3
+                            minLines = 3,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color(0xFF1A1A1A),
+                                unfocusedTextColor = Color(0xFF1A1A1A)
+                            )
                         )
 
                         // 7. Fecha y Hora
@@ -280,7 +296,11 @@ fun CreateJobScreen(
                                     isError = dateTimeError,
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
-                                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Calendario") }
+                                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = "Calendario") },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color(0xFF1A1A1A),
+                                        unfocusedTextColor = Color(0xFF1A1A1A)
+                                    )
                                 )
                                 Spacer(modifier = Modifier.matchParentSize().background(Color.Transparent).clickable { showDatePicker = true })
                             }
@@ -295,7 +315,11 @@ fun CreateJobScreen(
                                     isError = dateTimeError,
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
-                                    trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = "Reloj") }
+                                    trailingIcon = { Icon(Icons.Default.Schedule, contentDescription = "Reloj") },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color(0xFF1A1A1A),
+                                        unfocusedTextColor = Color(0xFF1A1A1A)
+                                    )
                                 )
                                 Spacer(modifier = Modifier.matchParentSize().background(Color.Transparent).clickable { showTimePicker = true })
                             }

@@ -1,37 +1,76 @@
 package com.example.tasky.ui.profile
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.WorkHistory
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.tasky.domain.model.Job
-import com.example.tasky.domain.model.User
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.layout.ContentScale
-import coil.compose.AsyncImage
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.tasky.domain.model.Job
+import com.example.tasky.domain.model.User
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +84,7 @@ fun UserProfileScreen(
     onNavigateBack: () -> Unit,
     onEditProfile: () -> Unit,
     onJobClick: (String) -> Unit,
+    onViewAllJobsClick: () -> Unit, // <-- AGREGADO AQUÍ
     onUpdateField: (String, Any?) -> Unit,
     onSaveProfile: () -> Unit,
     onCancelEdit: () -> Unit,
@@ -112,6 +152,7 @@ fun UserProfileScreen(
                 isSaving = isSaving,
                 isUploadingImage = isUploadingImage,
                 onJobClick = onJobClick,
+                onViewAllJobsClick = onViewAllJobsClick, // <-- PASADO AQUÍ
                 onUpdateField = onUpdateField,
                 onSaveProfile = onSaveProfile,
                 onCancelEdit = onCancelEdit,
@@ -131,6 +172,7 @@ private fun ProfileContent(
     isSaving: Boolean,
     isUploadingImage: Boolean,
     onJobClick: (String) -> Unit,
+    onViewAllJobsClick: () -> Unit, // <-- AGREGADO AQUÍ
     onUpdateField: (String, Any?) -> Unit,
     onSaveProfile: () -> Unit,
     onCancelEdit: () -> Unit,
@@ -281,7 +323,12 @@ private fun ProfileContent(
         }
 
         // Trabajos publicados
-        PublishedJobsSection(jobs = myJobs, isLoading = isLoadingJobs, onJobClick = onJobClick)
+        PublishedJobsSection(
+            jobs = myJobs,
+            isLoading = isLoadingJobs,
+            onJobClick = onJobClick,
+            onViewAllJobsClick = onViewAllJobsClick // <-- PASADO AQUÍ
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
     }
@@ -858,7 +905,8 @@ private fun BioSection(bio: String?) {
 private fun PublishedJobsSection(
     jobs: List<Job>,
     isLoading: Boolean,
-    onJobClick: (String) -> Unit
+    onJobClick: (String) -> Unit,
+    onViewAllJobsClick: () -> Unit // <-- AGREGADO AQUÍ
 ) {
     Surface(
         modifier = Modifier
@@ -903,7 +951,7 @@ private fun PublishedJobsSection(
                     JobItem(
                         title = job.title,
                         category = job.category,
-                        date = "Reciente", // O puedes formatear tu job.scheduledDate si lo tienes
+                        date = "Reciente",
                         status = job.status ?: "Activo",
                         payment = "$${job.payment}",
                         onClick = { onJobClick(job.id ?: "") }
@@ -921,7 +969,7 @@ private fun PublishedJobsSection(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedButton(
-                onClick = { /* Funcionalidad futura */ },
+                onClick = onViewAllJobsClick, // <-- REEMPLAZADO AQUÍ PARA QUE HAGA LA ACCIÓN
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF7B8EDB))
@@ -1050,7 +1098,8 @@ fun UserProfileRoute(
     viewModel: UserProfileViewModel,
     onNavigateBack: () -> Unit,
     onEditProfile: () -> Unit,
-    onJobClick: (String) -> Unit
+    onJobClick: (String) -> Unit,
+    onViewAllJobsClick: () -> Unit // <-- AGREGADO AQUÍ TMB
 ) {
     val state = viewModel.state
 
@@ -1064,6 +1113,7 @@ fun UserProfileRoute(
         onNavigateBack = onNavigateBack,
         onEditProfile = onEditProfile,
         onJobClick = onJobClick,
+        onViewAllJobsClick = onViewAllJobsClick, // <-- PASADO DESDE LA RUTA
         onUpdateField = { field, value ->
             viewModel.updateProfileField(field, value)
         },
