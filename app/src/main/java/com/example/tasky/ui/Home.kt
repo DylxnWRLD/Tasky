@@ -246,7 +246,7 @@ fun JobCard(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.Black)
                 Text(description, style = MaterialTheme.typography.bodyMedium, maxLines = 2, color = Color.Gray)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
