@@ -17,11 +17,12 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import com.example.tasky.data.remote.SupabaseClient
+import com.example.tasky.ui.map.TaskyOsmTileSource
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.delay
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.Marker
 
 @Composable
@@ -175,7 +176,8 @@ fun JobDetailScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         factory = { ctx ->
                                             MapView(ctx).apply {
-                                                setTileSource(TileSourceFactory.MAPNIK)
+                                                setTileSource(TaskyOsmTileSource)
+                                                overlays.add(CopyrightOverlay(ctx))
                                                 setMultiTouchControls(true)
                                                 setBuiltInZoomControls(false)
                                                 controller.setZoom(17.5)

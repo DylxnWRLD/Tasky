@@ -30,11 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
-import org.osmdroid.config.Configuration
+import com.example.tasky.ui.map.TaskyOsmTileSource
 import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.CopyrightOverlay
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 
@@ -229,9 +229,9 @@ fun CreateJobScreen(
                             AndroidView(
                                 modifier = Modifier.fillMaxSize(),
                                 factory = { ctx ->
-                                    Configuration.getInstance().userAgentValue = ctx.packageName
                                     MapView(ctx).apply {
-                                        setTileSource(TileSourceFactory.MAPNIK)
+                                        setTileSource(TaskyOsmTileSource)
+                                        overlays.add(CopyrightOverlay(ctx))
                                         setMultiTouchControls(true)
                                         controller.setZoom(16.0)
                                         controller.setCenter(selectedLocation)
